@@ -7,6 +7,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 
 from config import API_TOKEN
+from db import init
 
 from handlers import command_start_handler, echo_handler
 
@@ -25,6 +26,7 @@ dp.include_router(router)
 
 # Функция для запуска бота
 async def start_bot():
+    await init()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
