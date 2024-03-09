@@ -13,22 +13,19 @@ async def command_start_handler(message: Message) -> None:
     
     # Использование get_or_create для предотвращения дублирования данных пользователя
     user, created = await User.get_or_create(
-        telegram_user_id=telegram_user.id,
         defaults={
-            'fullname': telegram_user.full_name,
+            'telegram_user_id': telegram_user.id,
+            'telegram_fullname': telegram_user.full_name,
             'username': telegram_user.username,
-            'phone_number': None,  # Замените None на актуальные данные, если они у вас есть
-            'email': None,         # Замените None на актуальные данные
-            'location': None       # Замените None на актуальные данные
         }
     )
     
     if created:
         # Если пользователь был создан
-        await message.answer(f"Привет, {hbold(user.fullname)}! Меня зовут MOLEKULA, приятно познакомится.")
+        await message.answer(f"Привет, {hbold(user.telegram_fullname)}! Меня зовут MOLEKULA, приятно познакомится.")
     else:
         # Если пользователь уже существует
-        await message.answer(f"С возвращением, {hbold(user.fullname)}! MOLEKULA, к вашим услугам.")
+        await message.answer(f"С возвращением, {hbold(user.telegram_fullname)}! MOLEKULA, к вашим услугам.")
     # Most event objects have aliases for API methods that can be called in events' context
     # For example if you want to answer to incoming message you can use `message.answer(...)` alias
     # and the target chat will be passed to :ref:`aiogram.methods.send_message.SendMessage`
