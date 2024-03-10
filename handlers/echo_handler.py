@@ -1,4 +1,7 @@
-from aiogram import types, Bot
+from aiogram import types
+
+
+
 
 
 async def echo_handler(message: types.Message) -> None:

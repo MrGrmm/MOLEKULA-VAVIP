@@ -6,10 +6,11 @@ from aiogram import Bot, Dispatcher, Router, types
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 
+
 from config import API_TOKEN
 from db import init
 
-from handlers import command_start_handler, echo_handler
+from handlers import command_start_handler, echo_handler, hi_message
 
 
 bot = Bot(API_TOKEN, parse_mode=ParseMode.HTML)
@@ -18,6 +19,7 @@ bot = Bot(API_TOKEN, parse_mode=ParseMode.HTML)
 router = Router()
 
 router.message.register(command_start_handler, CommandStart())
+router.message.register(hi_message)
 router.message.register(echo_handler)
 
 # Создание диспетчера и включение роутера

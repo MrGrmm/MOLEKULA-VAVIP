@@ -1,34 +1,24 @@
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.markdown import hbold
 from models import User
 
 
-async def command_start_handler(message: Message) -> None:
-    """
-    This handler receives messages with `/start` command
-    """
-    # Предполагаем, что у объекта message есть атрибут from_user,
-    # который возвращает объект пользователя Telegram.
+
+async def command_start_handler(message: Message):
     telegram_user = message.from_user
-    
-    # Использование get_or_create для предотвращения дублирования данных пользователя
-    user, created = await User.get_or_create(
-        defaults={
-            'telegram_user_id': telegram_user.id,
-            'telegram_fullname': telegram_user.full_name,
-            'username': telegram_user.username,
-        }
-    )
-    
-    if created:
-        # Если пользователь был создан
-        await message.answer(f"Привет, {hbold(user.telegram_fullname)}! Меня зовут MOLEKULA, приятно познакомится.")
+    # Пытаемся получить пользователя из БД по его идентификатору в Telegram
+    user = await User.get_or_none(telegram_user_id=telegram_user.id)
+    if user is None:
+        # Если пользователь не найден, создаем новую запись
+        user = await User.create(
+            telegram_user_id=telegram_user.id,
+            telegram_fullname=telegram_user.full_name,
+            username=telegram_user.username,
+        )
+        welcome_text = f"Привет, {telegram_user.full_name}! Меня зовут MOLEKULA, приятно познакомиться."
     else:
-        # Если пользователь уже существует
-        await message.answer(f"С возвращением, {hbold(user.telegram_fullname)}! MOLEKULA, к вашим услугам.")
-    # Most event objects have aliases for API methods that can be called in events' context
-    # For example if you want to answer to incoming message you can use `message.answer(...)` alias
-    # and the target chat will be passed to :ref:`aiogram.methods.send_message.SendMessage`
-    # method automatically or call API method directly via
-    # Bot instance: `bot.send_message(chat_id=message.chat.id, ...)`
-    pass
+        # Если пользователь уже существует, просто отправляем приветствие
+        welcome_text = f"С возвращением, {user.telegram_fullname}! MOLEKULA, к вашим услугам."
+
+    # Отправляем соответствующее приветственное сообщение пользователю
+    await message.answer(welcome_text, reply_markup=ReplyKeyboardMarkup(resize_keyboard=True, keyboard=[[KeyboardButton(text="Привет")]]))

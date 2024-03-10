@@ -8,6 +8,11 @@ class UserType(Enum):
     CLIENT = "клиент"
     ADMIN = "админ"
 
+class BriefStatus(Enum):
+    NEW = "новый"
+    IN_WORK = "в работе"
+    COMPLETED = "завершен"    
+
 class BriefType(Enum):
     DESIGN = "проектирование"
     CONFIGURATION = "комплектация"
@@ -39,8 +44,11 @@ class User(Model):
 
 class Brief(Model):
     id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255)
-    status = fields.CharField(max_length=255)
+    name = fields.CharField(max_length=255, null=True)
+    status = fields.CharEnumField(
+        enum_type=BriefStatus,
+        default=BriefStatus.NEW
+    )
     created_at = fields.DatetimeField(auto_now_add=True)
     user = fields.ForeignKeyField('models.User', related_name='briefs')
     brief_type = fields.CharEnumField(
