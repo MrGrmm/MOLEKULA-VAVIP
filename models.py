@@ -64,6 +64,8 @@ class Brief(Model):
 class Question(Model):
     id = fields.IntField(pk=True)
     question = fields.CharField(max_length=855)
+    image_url = fields.CharField(max_length=855)
+    consultation_url = fields.CharField(max_length=855)
     answer_type = fields.CharEnumField(
         enum_type=AnswerType,
         # default=null
@@ -71,7 +73,6 @@ class Question(Model):
     )
     answer_options = fields.JSONField(null=True)
     next_question_id = fields.IntField(null=True)
-    brief = fields.ForeignKeyField('models.Brief', related_name='questions', null=True)
 
     def __str__(self):
         return f"{self.question}"
@@ -86,3 +87,13 @@ class Answer(Model):
 
     def __str__(self):
         return f"{self.answer}"
+    
+
+class UserState(Model):
+    id = fields.IntField(pk=True)
+    user = fields.ForeignKeyField('models.User', related_name='state')
+    current_question = fields.ForeignKeyField('models.Question', related_name='state', null=True)
+    context_data = fields.JSONField()  # Это поле может хранить любые дополнительные данные
+
+    class Meta:
+        table = "user_states"
