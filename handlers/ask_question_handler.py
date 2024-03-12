@@ -1,4 +1,6 @@
 from aiogram import types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+import json
 import sqlite3
 import datetime
 from models import User, Brief, Question, UserState, Answer
@@ -38,6 +40,40 @@ async def hi_message(callback_query: types.CallbackQuery):
             await callback_query.answer(f"Ошибка: {e}")
         else:
             await callback_query.answer("Ваш ответ успешно сохранен.")
+            # Получение ID следующего вопроса из текущего вопроса
+            next_question_id = current_question.next_question_id
+            if next_question_id is not None:
+            # Получение следующего вопроса по ID
+                next_question = await Question.get(id=next_question_id)     
+                if next_question:
+                    # Проверяем, есть ли у следующего вопроса варианты ответа
+                    if next_question.answer_options:
+                        answer_options = next_question.answer_options
+                        # Создаем клавиатуру с кнопками для каждого варианта ответа
+                        answer_kb = ReplyKeyboardMarkup(
+                                                        resize_keyboard=True,
+                                                        one_time_keyboard=True,
+                                                        keyboard=[
+                                                            [KeyboardButton(text=answer)] for answer in answer_options.keys()
+                                                        ]
+                                                    )
+                        # Обновляем состояние пользователя с id следующего вопроса перед отправкой
+                        user_state.current_question = next_question
+                        user_state.context_data = {}  # или обновите context_data если это необходимо
+                        await user_state.save()
+                        # Отправляем следующий вопрос с клавиатурой
+
+                        await callback_query.answer(next_question.question, reply_markup=answer_kb)
+
+                    else:
+                        # Отправляем следующий вопрос пользователю
+                        await callback_query.answer(next_question.question)
+                else:
+                    # Следующий вопрос не найден, отправляем сообщение об этом пользователю
+                    await callback_query.answer("Следующий вопрос не найден.")
+            else:
+                # ID следующего вопроса не задан, можно завершить диалог или обработать иначе
+                await callback_query.answer("Это был последний вопрос. Спасибо за ваше время!")
     # Если состояние пользователя ещё не существует то:
     else:
         # Извлекаем первый вопрос из базы данных
