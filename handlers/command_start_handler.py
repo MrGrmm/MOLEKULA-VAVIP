@@ -20,5 +20,5 @@ async def command_start_handler(message: Message):
         # Если пользователь уже существует, просто отправляем приветствие
         welcome_text = f"С возвращением, {user.telegram_fullname}! MOLEKULA, к вашим услугам."
 
-    # Отправляем соответствующее приветственное сообщение пользователю
+    # Отправляем соответствующее приветственное сообщение пользователю с кнопкой для ответа
     await message.answer(welcome_text, reply_markup=ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True, keyboard=[[KeyboardButton(text="Привет")]]))

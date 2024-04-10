@@ -6,12 +6,17 @@ import datetime
 from models import User, Brief, Question, UserState, Answer
 
 
-try:
-    db = sqlite3.connect('db.sqlite3')
-    print("DB is connected")
-except:
-    print('ERROR DB connection')
 
+def connect_to_database(db_path='db.sqlite3'):
+    try:
+        db = sqlite3.connect(db_path)
+        print("DB is connected")
+        return db
+    except Exception as e:
+        print(f'ERROR DB connection: {e}')
+        return None
+    
+db = connect_to_database()
 
 
 
@@ -81,14 +86,19 @@ async def hi_message(callback_query: types.CallbackQuery):
                                 user_state.context_data = {}  # или обновите context_data если это необходимо
                                 await user_state.save()
                                 # Отправляем следующий вопрос с клавиатурой
-
+                                print('CheCK1')
                                 await callback_query.answer(next_question.question, reply_markup=answer_kb)
 
                             else:
+                                user_state.current_question = next_question
+                                user_state.context_data = {}  # или обновите context_data если это необходимо
+                                await user_state.save()
                                 # Отправляем следующий вопрос пользователю
+                                print('CheCK2')
                                 await callback_query.answer(next_question.question)
                         else:
                             # Следующий вопрос не найден, отправляем сообщение об этом пользователю
+                            print('CheCK3')
                             await callback_query.answer("Следующий вопрос не найден.")
                     else:
                         # ID следующего вопроса не задан, можно завершить диалог или обработать иначе
@@ -115,11 +125,15 @@ async def hi_message(callback_query: types.CallbackQuery):
                                 user_state.context_data = {}  # или обновите context_data если это необходимо
                                 await user_state.save()
                                 # Отправляем следующий вопрос с клавиатурой
-
+                                print('CheCK4')
                                 await callback_query.answer(next_question.question, reply_markup=answer_kb)
 
                             else:
                                 # Отправляем следующий вопрос пользователю
+                                user_state.current_question = next_question
+                                user_state.context_data = {}  # или обновите context_data если это необходимо
+                                await user_state.save()
+                                print('CheCK5')
                                 await callback_query.answer(next_question.question)
                         else:
                             # Следующий вопрос не найден, отправляем сообщение об этом пользователю
@@ -133,12 +147,10 @@ async def hi_message(callback_query: types.CallbackQuery):
             first_question = await Question.filter(id=1).first()
             # Если первый вопрос в базе данных существует то задаём его пользователю и создаём новую запись о состоянии пользователя в базе данных
             if first_question is not None:
+                print('CheCK6')
                 await callback_query.answer(first_question.question)
                 user_state = await UserState.create(user=user, current_question=first_question, context_data=())
 
-        # Теперь вам нужно добавить логику для обработки ответов пользователя
-        # и их сохранения в таблицу Answer, а также логику для получения и отправки
-        # следующего вопроса, если это применимо.
     else:
         callback_query.answer("Вы не зарегистрированы, чтобы зарегистрироваться воспользуйтесь командой /start")
     
