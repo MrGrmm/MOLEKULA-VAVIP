@@ -19,6 +19,47 @@ def connect_to_database(db_path='db.sqlite3'):
 db = connect_to_database()
 
 
+async def handle_question_response(callback_query, current_question, user_answer):
+    # Предположим, что функция уже имеет доступ к current_question и user_answer
+    if user_answer == "Нужна консультация":
+        # Отправляем URL для консультации пользователю, так как предполагается, что он существует
+        await callback_query.answer(current_question.consultation_url)
+
+
+async def handle_special_question_1002(user_state, user_answer):
+    # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+    if not user_state.context_data:
+        user_state.context_data = {}
+
+    # Обновление context_data в зависимости от ответа пользователя
+    if user_answer == "Есть и то и то":
+        user_state.context_data.update({"design_project": False, "plumbing_project": False})
+    elif user_answer == "Есть дизайн проект":
+        user_state.context_data.update({"design_project": False})
+    elif user_answer == "Есть проект сантехнических работ":
+        user_state.context_data.update({"plumbing_project": False})
+
+    # Сохранение обновленного состояния в базу данных
+    await user_state.save()
+    print("Context data updated:", user_state.context_data)
+
+
+async def handle_special_question_1127(user_state, user_answer):
+    # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+    if not user_state.context_data:
+        user_state.context_data = {}
+
+    # Обновление context_data в зависимости от ответа пользователя
+    if user_answer == "Проточный":
+        user_state.context_data.update({"flow_heater": True})
+    elif user_answer == "Накопительный":
+        user_state.context_data.update({"Storage_heater": True})
+
+
+    # Сохранение обновленного состояния в базу данных
+    await user_state.save()
+    print("Context data updated:", user_state.context_data)
+
 
 async def hi_message(callback_query: types.CallbackQuery):
     # Получаем ID пользователя из запроса
@@ -60,10 +101,16 @@ async def hi_message(callback_query: types.CallbackQuery):
             except Exception as e:
                 await callback_query.answer(f"Ошибка: {e}")
             else:
-                await callback_query.answer("Ваш ответ успешно сохранен.")
+                print(f"Ответ успешно сохранен.")
                 # Получение ID следующего вопроса из текущего вопроса
                 print(current_question)
                 print(current_question.answer_options)
+                if user_answer == "Нужна консультация":
+                    await handle_question_response(callback_query, current_question, user_answer)
+                if current_question.id == 1002:
+                    await handle_special_question_1002(user_state, user_answer)
+                if current_question.id == 1127:
+                    await handle_special_question_1127(user_state, user_answer)
                 if current_question.answer_options is not None:
                     next_question_id = current_question.answer_options[user_answer]
                     if next_question_id is not None:
@@ -83,7 +130,6 @@ async def hi_message(callback_query: types.CallbackQuery):
                                                             )
                                 # Обновляем состояние пользователя с id следующего вопроса перед отправкой
                                 user_state.current_question = next_question
-                                user_state.context_data = {}  # или обновите context_data если это необходимо
                                 await user_state.save()
                                 # Отправляем следующий вопрос с клавиатурой
                                 print('CheCK1')
@@ -91,7 +137,6 @@ async def hi_message(callback_query: types.CallbackQuery):
 
                             else:
                                 user_state.current_question = next_question
-                                user_state.context_data = {}  # или обновите context_data если это необходимо
                                 await user_state.save()
                                 # Отправляем следующий вопрос пользователю
                                 print('CheCK2')
@@ -122,7 +167,6 @@ async def hi_message(callback_query: types.CallbackQuery):
                                                             )
                                 # Обновляем состояние пользователя с id следующего вопроса перед отправкой
                                 user_state.current_question = next_question
-                                user_state.context_data = {}  # или обновите context_data если это необходимо
                                 await user_state.save()
                                 # Отправляем следующий вопрос с клавиатурой
                                 print('CheCK4')
@@ -131,7 +175,6 @@ async def hi_message(callback_query: types.CallbackQuery):
                             else:
                                 # Отправляем следующий вопрос пользователю
                                 user_state.current_question = next_question
-                                user_state.context_data = {}  # или обновите context_data если это необходимо
                                 await user_state.save()
                                 print('CheCK5')
                                 await callback_query.answer(next_question.question)
