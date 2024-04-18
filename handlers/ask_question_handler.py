@@ -19,11 +19,48 @@ def connect_to_database(db_path='db.sqlite3'):
 db = connect_to_database()
 
 
-async def handle_question_response(callback_query, current_question, user_answer):
+
+async def update_user_name(telegram_user_id, user_answer):
+    try:
+        # Получаем пользователя по ID
+        user = await User.get(telegram_user_id=telegram_user_id)
+        # Обновляем имя пользователя текстом ответа пользователя
+        user.name = user_answer
+        # Сохраняем изменения
+        await user.save()
+        return "Имя пользователя обновлено."
+    except Exception as e:
+        return f"Ошибка обновления имени пользователя: {e}"
+
+
+async def handle_question_consultation(callback_query, current_question, user_answer):
     # Предположим, что функция уже имеет доступ к current_question и user_answer
     if user_answer == "Нужна консультация":
         # Отправляем URL для консультации пользователю, так как предполагается, что он существует
         await callback_query.answer(current_question.consultation_url)
+
+
+async def handle_special_question_5(user_state, user_answer):
+    # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+    if not user_state.context_data:
+        user_state.context_data = {}
+
+    # Обновление context_data в зависимости от ответа пользователя
+    if user_answer == "Нужны все разделы":
+        user_state.context_data.update({"vodosnab": False,
+                                        "otoplen": False,
+                                        "kanaliz": False,
+                                        "uzel": False
+                                        })
+    elif user_answer == "Водоснабжение":
+        user_state.context_data.update({"vodosnab": False})
+    elif user_answer == "Отопление":
+        user_state.context_data.update({"otoplen": False})
+    elif user_answer == "Канализация":
+        user_state.context_data.update({"kanaliz": False})
+    elif user_answer == "Узел ввода":
+        user_state.context_data.update({"uzel": False})
+
 
 
 async def handle_special_question_1002(user_state, user_answer):
@@ -61,6 +98,20 @@ async def handle_special_question_1127(user_state, user_answer):
     print("Context data updated:", user_state.context_data)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 async def hi_message(callback_query: types.CallbackQuery):
     # Получаем ID пользователя из запроса
     telegram_user_id = callback_query.from_user.id
@@ -83,17 +134,10 @@ async def hi_message(callback_query: types.CallbackQuery):
             current_question = await Question.get(id=current_question.id)
             # Сохраняем ответ пользователя в переменную
             user_answer = callback_query.text  
-            if current_question.id == 1:
-                try:
-                    # Получаем пользователя по ID
-                    user = await User.get(telegram_user_id=telegram_user_id)
-                    # Обновляем имя пользователя текстом ответа пользователя
-                    user.name = user_answer
-                    # Сохраняем изменения
-                    await user.save()
-                    print("Имя пользователя обновлено.")
-                except:
-                    print("ОШИБКА")
+            if current_question.id == 1:  # Если это специфический вопрос, где нужно обновить имя
+                result_message = await update_user_name(callback_query.from_user.id, user_answer)
+                print(result_message)  # Выведет сообщение о статусе обновления
+
             # Пробуем создать запись с ответом пользователя        
             try:
                 await Answer.create(user=user, brief=brief, question=current_question, answer=user_answer)                 
@@ -106,11 +150,14 @@ async def hi_message(callback_query: types.CallbackQuery):
                 print(current_question)
                 print(current_question.answer_options)
                 if user_answer == "Нужна консультация":
-                    await handle_question_response(callback_query, current_question, user_answer)
+                    await handle_question_consultation(callback_query, current_question, user_answer)
+                if current_question.id == 5:
+                    await handle_special_question_5(user_state, user_answer)
                 if current_question.id == 1002:
                     await handle_special_question_1002(user_state, user_answer)
                 if current_question.id == 1127:
                     await handle_special_question_1127(user_state, user_answer)
+                
                 if current_question.answer_options is not None:
                     next_question_id = current_question.answer_options[user_answer]
                     if next_question_id is not None:
