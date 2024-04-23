@@ -102,7 +102,7 @@ async def handle_special_question_1100(user_state, user_answer):
         user_state.context_data = {}
     # Обновление context_data в зависимости от ответа пользователя
     if not user_answer == "Нужна консультация":
-        user_state.context_data.update({"unconfigured_node_count": int(user_answer)})
+        user_state.context_data.update({"unconfigured_nodes_count": int(user_answer)})
     # Сохранение обновленного состояния в базу данных
     await user_state.save()
     print("Context data updated:", user_state.context_data)
@@ -178,10 +178,10 @@ async def set_next_question_and_save(user_state, next_question_id, callback_quer
             ]
         )
         # Отправляем следующий вопрос с клавиатурой
-        await callback_query.message.answer(next_question.question, reply_markup=answer_kb)
+        await callback_query.answer(next_question.question, reply_markup=answer_kb)
     else:
         # Отправляем следующий вопрос без клавиатуры
-        await callback_query.message.answer(next_question.question)
+        await callback_query.answer(next_question.question)
 
 
 
@@ -239,119 +239,27 @@ async def hi_message(callback_query: types.CallbackQuery):
                     await handle_special_question_1002(user_state, user_answer)
                 if current_question.id == 1100:
                     await handle_special_question_1100(user_state, user_answer)
+                    
                 if current_question.id == 1127:
                     await handle_special_question_1127(user_state, user_answer)
                 if current_question.id == 1165:
                     next_question_id = await process_unconfigured_nodes_count(user_state, current_question)
                     if next_question_id is not None:
                     # Получение следующего вопроса по ID
-                        next_question = await Question.get(id=next_question_id)     
-                        if next_question:
-                            # Проверяем, есть ли у следующего вопроса варианты ответа
-                            if next_question.answer_options:
-                                answer_options = next_question.answer_options
-                                # Создаем клавиатуру с кнопками для каждого варианта ответа
-                                answer_kb = ReplyKeyboardMarkup(
-                                                                resize_keyboard=True,
-                                                                one_time_keyboard=True,
-                                                                keyboard=[
-                                                                    [KeyboardButton(text=answer)] for answer in answer_options.keys()
-                                                                ]
-                                                            )
-                                # Обновляем состояние пользователя с id следующего вопроса перед отправкой
-                                user_state.current_question = next_question
-                                await user_state.save()
-                                # Отправляем следующий вопрос с клавиатурой
-                                print('CheCK1')
-                                await callback_query.answer(next_question.question, reply_markup=answer_kb)
+                        print("TEST222222222")
+                        await set_next_question_and_save(user_state, next_question_id, callback_query)
 
-                            else:
-                                user_state.current_question = next_question
-                                await user_state.save()
-                                # Отправляем следующий вопрос пользователю
-                                print('CheCK2')
-                                await callback_query.answer(next_question.question)
-                        else:
-                            # Следующий вопрос не найден, отправляем сообщение об этом пользователю
-                            print('CheCK3')
-                            await callback_query.answer("Следующий вопрос не найден.")
-                    else:
-                        # ID следующего вопроса не задан, можно завершить диалог или обработать иначе
-                        await callback_query.answer("Это был последний вопрос. Спасибо за ваше время!")
                 else:
                     if current_question.answer_options is not None:
                         next_question_id = current_question.answer_options[user_answer]
                         if next_question_id is not None:
-                        # Получение следующего вопроса по ID
-                            next_question = await Question.get(id=next_question_id)     
-                            if next_question:
-                                # Проверяем, есть ли у следующего вопроса варианты ответа
-                                if next_question.answer_options:
-                                    answer_options = next_question.answer_options
-                                    # Создаем клавиатуру с кнопками для каждого варианта ответа
-                                    answer_kb = ReplyKeyboardMarkup(
-                                                                    resize_keyboard=True,
-                                                                    one_time_keyboard=True,
-                                                                    keyboard=[
-                                                                        [KeyboardButton(text=answer)] for answer in answer_options.keys()
-                                                                    ]
-                                                                )
-                                    # Обновляем состояние пользователя с id следующего вопроса перед отправкой
-                                    user_state.current_question = next_question
-                                    await user_state.save()
-                                    # Отправляем следующий вопрос с клавиатурой
-                                    print('CheCK1')
-                                    await callback_query.answer(next_question.question, reply_markup=answer_kb)
+                            await set_next_question_and_save(user_state, next_question_id, callback_query)
 
-                                else:
-                                    user_state.current_question = next_question
-                                    await user_state.save()
-                                    # Отправляем следующий вопрос пользователю
-                                    print('CheCK2')
-                                    await callback_query.answer(next_question.question)
-                            else:
-                                # Следующий вопрос не найден, отправляем сообщение об этом пользователю
-                                print('CheCK3')
-                                await callback_query.answer("Следующий вопрос не найден.")
-                        else:
-                            # ID следующего вопроса не задан, можно завершить диалог или обработать иначе
-                            await callback_query.answer("Это был последний вопрос. Спасибо за ваше время!")
                     else:    
                         next_question_id = current_question.next_question_id
                         if next_question_id is not None:
-                        # Получение следующего вопроса по ID
-                            next_question = await Question.get(id=next_question_id)     
-                            if next_question:
-                                # Проверяем, есть ли у следующего вопроса варианты ответа
-                                if next_question.answer_options:
-                                    answer_options = next_question.answer_options
-                                    # Создаем клавиатуру с кнопками для каждого варианта ответа
-                                    answer_kb = ReplyKeyboardMarkup(
-                                                                    resize_keyboard=True,
-                                                                    one_time_keyboard=True,
-                                                                    keyboard=[
-                                                                        [KeyboardButton(text=answer)] for answer in answer_options.keys()
-                                                                    ]
-                                                                )
-                                    # Обновляем состояние пользователя с id следующего вопроса перед отправкой
-                                    user_state.current_question = next_question
-                                    await user_state.save()
-                                    # Отправляем следующий вопрос с клавиатурой
-                                    print('CheCK4')
-                                    await callback_query.answer(next_question.question, reply_markup=answer_kb)
+                            await set_next_question_and_save(user_state, next_question_id, callback_query)
 
-                                else:
-                                    # Отправляем следующий вопрос пользователю
-                                    user_state.current_question = next_question
-                                    await user_state.save()
-                                    print('CheCK5')
-                                    await callback_query.answer(next_question.question)
-                            else:
-                                # Следующий вопрос не найден, отправляем сообщение об этом пользователю
-                                await callback_query.answer("Следующий вопрос не найден.")
-                        else:
-                            # ID следующего вопроса не задан, можно завершить диалог или обработать иначе
-                            await callback_query.answer("Это был последний вопрос. Спасибо за ваше время!")
             # Если состояние пользователя ещё не существует то:
         else:
             # Извлекаем первый вопрос из базы данных
