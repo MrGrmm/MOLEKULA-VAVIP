@@ -102,10 +102,40 @@ async def handle_special_question_1100(user_state, user_answer):
         user_state.context_data = {}
     # Обновление context_data в зависимости от ответа пользователя
     if not user_answer == "Нужна консультация":
-        user_state.context_data.update({"unconfigured_nodes_count": int(user_answer)})
+        user_state.context_data.update({"unconfigured_node_count": int(user_answer)})
     # Сохранение обновленного состояния в базу данных
     await user_state.save()
     print("Context data updated:", user_state.context_data)
+
+
+async def process_unconfigured_bathroom_in_node_count(user_state, current_question):
+    # Получаем количество не настроенных узлов из context_data
+    unconfigured_bathroom_in_node_count = user_state.context_data.get("unconfigured_bathroom_in_node_count", 0)
+
+    # Уменьшаем количество на 1, если оно больше 0
+    if unconfigured_bathroom_in_node_count > 0:
+        unconfigured_bathroom_in_node_count -= 1
+        user_state.context_data["unconfigured_bathroom_in_node_count"] = unconfigured_bathroom_in_node_count
+        await user_state.save()  # Предполагаем, что у user_state есть метод save()
+
+        # Если после уменьшения, количество все еще больше 0, возвращаем 1101
+        if unconfigured_bathroom_in_node_count > 0:
+            return 1109
+
+    # В противном случае, возвращаем next_question_id как обычно из текущего вопроса
+    return current_question.next_question_id
+
+
+async def handle_special_question_1101(user_state, user_answer):
+    # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+    if not user_state.context_data:
+        user_state.context_data = {}
+    # Обновление context_data в зависимости от ответа пользователя
+        user_state.context_data.update({"unconfigured_bathroom_in_node_count": int(user_answer)})
+    # Сохранение обновленного состояния в базу данных
+    await user_state.save()
+    print("Context data updated:", user_state.context_data)
+
 
 
 async def handle_special_question_1127(user_state, user_answer):
@@ -124,7 +154,34 @@ async def handle_special_question_1127(user_state, user_answer):
 
 
 
+async def set_next_question_and_save(user_state, next_question_id, callback_query):
+    next_question = await Question.get_or_none(id=next_question_id)
 
+    if next_question is None:
+        # Следующий вопрос не найден
+        await callback_query.answer("Следующий вопрос не найден.")
+        return
+
+    # Обновляем текущий вопрос пользователя в состоянии
+    user_state.current_question = next_question
+    await user_state.save()
+
+    # Проверяем, есть ли у следующего вопроса варианты ответа
+    if next_question.answer_options:
+        # Создаем клавиатуру с кнопками для каждого варианта ответа
+        answer_options = next_question.answer_options
+        answer_kb = ReplyKeyboardMarkup(
+            resize_keyboard=True,
+            one_time_keyboard=True,
+            keyboard=[
+                [KeyboardButton(text=answer)] for answer in answer_options.keys()
+            ]
+        )
+        # Отправляем следующий вопрос с клавиатурой
+        await callback_query.message.answer(next_question.question, reply_markup=answer_kb)
+    else:
+        # Отправляем следующий вопрос без клавиатуры
+        await callback_query.message.answer(next_question.question)
 
 
 
