@@ -154,7 +154,10 @@ async def handle_special_question_1127(user_state, user_answer):
     print("Context data updated:", user_state.context_data)
 
 
-async def set_next_question_and_save_upd(user_state, next_question_id, callback_query):
+
+
+
+async def set_next_question_and_save_upd(user_state, next_question_id, callback_query, user_answer):
     next_question = await Question.get_or_none(id=next_question_id)
 
     if next_question is None:
@@ -191,56 +194,27 @@ async def set_next_question_and_save_upd(user_state, next_question_id, callback_
     elif answer_type.name == "COMBO":
          # Получение данных
         answer_options = next_question.answer_options
-        user_answer = user_state.current_question.answer
+        
 
-        # Сравнение ответа пользователя
-        answer_index = None
-        for key, value in answer_options.items():
-            if user_answer in value:
-                answer_index = key
-                break
-        if answer_index is not None:
-        # Обработка совпадения с данными
-            selected_data = answer_options[answer_index]
-            # ... (используйте selected_data для выполнения действий)
+        if answer_options is not None:
+            answer_options = next_question.answer_options
+            answer_kb = ReplyKeyboardMarkup(
+                resize_keyboard=True,
+                one_time_keyboard=True,
+                keyboard=[
+                    [KeyboardButton(text=answer)] for answer in answer_options.keys()
+                ]
+            )
+        # Отправляем следующий вопрос с клавиатурой
+            await callback_query.answer(next_question.question, reply_markup=answer_kb)
         else:
-            ...
-            # Обработка текстового сообщения
-            # ... (проверьте ключевые слова, запросите информацию, предоставьте справку)    
+            await callback_query.answer(next_question.question)
 
     else:
         await callback_query.answer(f"Неизвестный тип ответа: {answer_type}")
         return
 
 
-async def set_next_question_and_save(user_state, next_question_id, callback_query):
-    next_question = await Question.get_or_none(id=next_question_id)
-
-    if next_question is None:
-        # Следующий вопрос не найден
-        await callback_query.answer("Следующий вопрос не найден.")
-        return
-
-    # Обновляем текущий вопрос пользователя в состоянии
-    user_state.current_question = next_question
-    await user_state.save()
-
-    # Проверяем, есть ли у следующего вопроса варианты ответа
-    if next_question.answer_options:
-        # Создаем клавиатуру с кнопками для каждого варианта ответа
-        answer_options = next_question.answer_options
-        answer_kb = ReplyKeyboardMarkup(
-            resize_keyboard=True,
-            one_time_keyboard=True,
-            keyboard=[
-                [KeyboardButton(text=answer)] for answer in answer_options.keys()
-            ]
-        )
-        # Отправляем следующий вопрос с клавиатурой
-        await callback_query.answer(next_question.question, reply_markup=answer_kb)
-    else:
-        # Отправляем следующий вопрос без клавиатуры
-        await callback_query.answer(next_question.question)
 
 
 
@@ -271,7 +245,6 @@ async def hi_message(callback_query: types.CallbackQuery):
         if user_state and user_state.current_question is not None:
             # Получаем текущий вопрос пользователя
             current_question = await user_state.current_question.first()
-            print(user_state.current_question)    
             # Получаем текущий вопрос пользователя                                                
             current_question = await Question.get(id=current_question.id)
             # Сохраняем ответ пользователя в переменную
@@ -314,15 +287,37 @@ async def hi_message(callback_query: types.CallbackQuery):
                         await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
 
                 else:
-                    if current_question.answer_options is not None:
-                        next_question_id = current_question.answer_options[user_answer]
-                        if next_question_id is not None:
-                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
 
-                    else:    
+                    answer_type = current_question.answer_type
+                    if answer_type.name == "TEXT":
                         next_question_id = current_question.next_question_id
                         if next_question_id is not None:
-                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
+                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query, user_answer)
+
+                    elif answer_type.name == "CHOICE":
+                        # Обработка ответа типа "выбор"
+                        next_question_id = current_question.answer_options[user_answer]
+                        if next_question_id is not None:
+                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query, user_answer)
+
+                    elif answer_type.name == "FILE":
+                        # Обработка ответа типа "файл"
+                        ...
+
+                    elif answer_type.name == "COMBO":
+                        if user_answer in current_question.answer_options:
+                            next_question_id = current_question.answer_options[user_answer]
+                        else:
+                            next_question_id = current_question.next_question_id
+                        if next_question_id is not None:
+                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query, user_answer)
+
+
+
+                    else:
+                        await callback_query.answer(f"Неизвестный тип ответа: {answer_type}")
+                       
+                                         
 
             # Если состояние пользователя ещё не существует то:
         else:
