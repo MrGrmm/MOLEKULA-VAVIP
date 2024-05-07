@@ -108,18 +108,18 @@ async def handle_special_question_1100(user_state, user_answer):
     print("Context data updated:", user_state.context_data)
 
 
-async def process_unconfigured_bathroom_in_node_count(user_state, current_question):
+async def process_unconfigured_bathrooms_in_node_count(user_state, current_question):
     # Получаем количество не настроенных узлов из context_data
-    unconfigured_bathroom_in_node_count = user_state.context_data.get("unconfigured_bathroom_in_node_count", 0)
+    unconfigured_bathrooms_in_node_count = user_state.context_data.get("unconfigured_bathrooms_in_node_count", 0)
 
     # Уменьшаем количество на 1, если оно больше 0
-    if unconfigured_bathroom_in_node_count > 0:
-        unconfigured_bathroom_in_node_count -= 1
-        user_state.context_data["unconfigured_bathroom_in_node_count"] = unconfigured_bathroom_in_node_count
+    if unconfigured_bathrooms_in_node_count > 0:
+        unconfigured_bathrooms_in_node_count -= 1
+        user_state.context_data["unconfigured_bathrooms_in_node_count"] = unconfigured_bathrooms_in_node_count
         await user_state.save()  # Предполагаем, что у user_state есть метод save()
 
         # Если после уменьшения, количество все еще больше 0, возвращаем 1101
-        if unconfigured_bathroom_in_node_count > 0:
+        if unconfigured_bathrooms_in_node_count > 0:
             return 1109
 
     # В противном случае, возвращаем next_question_id как обычно из текущего вопроса
@@ -131,7 +131,8 @@ async def handle_special_question_1101(user_state, user_answer):
     if not user_state.context_data:
         user_state.context_data = {}
     # Обновление context_data в зависимости от ответа пользователя
-        user_state.context_data.update({"unconfigured_bathroom_in_node_count": int(user_answer)})
+    if not user_answer == "Нужна консультация":
+        user_state.context_data.update({"unconfigured_bathrooms_in_node_count": int(user_answer)})
     # Сохранение обновленного состояния в базу данных
     await user_state.save()
     print("Context data updated:", user_state.context_data)
@@ -152,6 +153,64 @@ async def handle_special_question_1127(user_state, user_answer):
     await user_state.save()
     print("Context data updated:", user_state.context_data)
 
+
+async def set_next_question_and_save_upd(user_state, next_question_id, callback_query):
+    next_question = await Question.get_or_none(id=next_question_id)
+
+    if next_question is None:
+        # Следующий вопрос не найден
+        await callback_query.answer("Следующий вопрос не найден.")
+        return
+
+    # Обновляем текущий вопрос пользователя в состоянии
+    user_state.current_question = next_question
+    await user_state.save()
+    
+    answer_type = next_question.answer_type
+
+    if answer_type.name == "TEXT":
+        await callback_query.answer(next_question.question)
+
+    elif answer_type.name == "CHOICE":
+        # Обработка ответа типа "выбор"
+        answer_options = next_question.answer_options
+        answer_kb = ReplyKeyboardMarkup(
+            resize_keyboard=True,
+            one_time_keyboard=True,
+            keyboard=[
+                [KeyboardButton(text=answer)] for answer in answer_options.keys()
+            ]
+        )
+        # Отправляем следующий вопрос с клавиатурой
+        await callback_query.answer(next_question.question, reply_markup=answer_kb)
+
+    elif answer_type.name == "FILE":
+        # Обработка ответа типа "файл"
+        ...
+
+    elif answer_type.name == "COMBO":
+         # Получение данных
+        answer_options = next_question.answer_options
+        user_answer = user_state.current_question.answer
+
+        # Сравнение ответа пользователя
+        answer_index = None
+        for key, value in answer_options.items():
+            if user_answer in value:
+                answer_index = key
+                break
+        if answer_index is not None:
+        # Обработка совпадения с данными
+            selected_data = answer_options[answer_index]
+            # ... (используйте selected_data для выполнения действий)
+        else:
+            ...
+            # Обработка текстового сообщения
+            # ... (проверьте ключевые слова, запросите информацию, предоставьте справку)    
+
+    else:
+        await callback_query.answer(f"Неизвестный тип ответа: {answer_type}")
+        return
 
 
 async def set_next_question_and_save(user_state, next_question_id, callback_query):
@@ -211,7 +270,8 @@ async def hi_message(callback_query: types.CallbackQuery):
         # Если состояние пользователя существует и есть текущий вопрос
         if user_state and user_state.current_question is not None:
             # Получаем текущий вопрос пользователя
-            current_question = await user_state.current_question.first()                          
+            current_question = await user_state.current_question.first()
+            print(user_state.current_question)    
             # Получаем текущий вопрос пользователя                                                
             current_question = await Question.get(id=current_question.id)
             # Сохраняем ответ пользователя в переменную
@@ -229,8 +289,7 @@ async def hi_message(callback_query: types.CallbackQuery):
             else:
                 print(f"Ответ успешно сохранен.")
                 # Получение ID следующего вопроса из текущего вопроса
-                print(current_question)
-                print(current_question.answer_options)
+
                 if user_answer == "Нужна консультация":
                     await handle_question_consultation(callback_query, current_question, user_answer)
                 if current_question.id == 5:
@@ -239,26 +298,31 @@ async def hi_message(callback_query: types.CallbackQuery):
                     await handle_special_question_1002(user_state, user_answer)
                 if current_question.id == 1100:
                     await handle_special_question_1100(user_state, user_answer)
-                    
+                if current_question.id == 1101:
+                    await handle_special_question_1101(user_state, user_answer)
+                if current_question.id == 1116:
+                    next_question_id = await process_unconfigured_bathrooms_in_node_count(user_state, current_question)
+                    if next_question_id is not None:
+                    # Получение следующего вопроса по ID
+                        await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
                 if current_question.id == 1127:
                     await handle_special_question_1127(user_state, user_answer)
                 if current_question.id == 1165:
                     next_question_id = await process_unconfigured_nodes_count(user_state, current_question)
                     if next_question_id is not None:
                     # Получение следующего вопроса по ID
-                        print("TEST222222222")
-                        await set_next_question_and_save(user_state, next_question_id, callback_query)
+                        await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
 
                 else:
                     if current_question.answer_options is not None:
                         next_question_id = current_question.answer_options[user_answer]
                         if next_question_id is not None:
-                            await set_next_question_and_save(user_state, next_question_id, callback_query)
+                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
 
                     else:    
                         next_question_id = current_question.next_question_id
                         if next_question_id is not None:
-                            await set_next_question_and_save(user_state, next_question_id, callback_query)
+                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
 
             # Если состояние пользователя ещё не существует то:
         else:

@@ -22,6 +22,7 @@ class AnswerType(Enum):
     TEXT = "текст"
     CHOICE = "выбор"
     FILE = "файл" 
+    COMBO = "комбинированный"
 
 
 class User(Model):
