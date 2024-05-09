@@ -155,9 +155,46 @@ async def handle_special_question_1127(user_state, user_answer):
 
 
 
+async def handle_special_question_2100(user_state, user_answer):
+    # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+    if not user_state.context_data:
+        user_state.context_data = {}
+    # Обновление context_data в зависимости от ответа пользователя
+    if user_answer == "ДА" or user_answer == "ПЛАНИРУЕТСЯ":
+        user_state.context_data.update({"architectural_project": False})
+        
+    # Сохранение обновленного состояния в базу данных
+    await user_state.save()
+    print("Context data updated:", user_state.context_data)
 
 
-async def set_next_question_and_save_upd(user_state, next_question_id, callback_query, user_answer):
+async def handle_special_question_2102(user_state, user_answer):
+    # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+    if not user_state.context_data:
+        user_state.context_data = {}
+    # Обновление context_data в зависимости от ответа пользователя
+    if user_answer == "ДА" or user_answer == "ПЛАНИРУЕТСЯ":
+        user_state.context_data.update({"design_project": False})
+        
+    # Сохранение обновленного состояния в базу данных
+    await user_state.save()
+    print("Context data updated:", user_state.context_data)
+
+
+async def handle_special_question_2104(user_state, user_answer):
+    # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+    if not user_state.context_data:
+        user_state.context_data = {}
+    # Обновление context_data в зависимости от ответа пользователя
+    user_state.context_data.update({"floor_count": int(user_answer)})
+    # Сохранение обновленного состояния в базу данных
+    await user_state.save()
+    print("Context data updated:", user_state.context_data)
+
+
+
+
+async def set_next_question_and_save_upd(user_state, next_question_id, callback_query):
     next_question = await Question.get_or_none(id=next_question_id)
 
     if next_question is None:
@@ -217,7 +254,33 @@ async def set_next_question_and_save_upd(user_state, next_question_id, callback_
 
 
 
+# async def handle_request_projects(callback_query, user_state):
+#     """
+#     Функция для проверки и обработки проектов.
 
+#     Args:
+#         context_data (dict): Словарь context_data пользователя.
+
+#     Returns:
+#         None: 
+#     """
+
+#     project_keys = [key for key in user_state.context_data if "project" in key]
+#     for project_key in project_keys:
+#         if user_state.context_data[project_key] is False:
+#             # Запрос загрузки файла проекта
+#             await callback_query.answer("Пожалуйста, загрузите файл проекта.")
+#             # ... (обработка полученного файла проекта)
+#             # ... (обновление context_data[project_key] = True)
+
+#     # Проверка, все ли значения True
+#     all_projects_true = all(user_state.context_data[project_key] for project_key in project_keys)
+
+#     if all_projects_true:
+#         # Переход к следующему вопросу
+#         next_question_id = current_question.next_question_id
+#         if next_question_id is not None:
+#             await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
 
 
 
@@ -280,6 +343,14 @@ async def hi_message(callback_query: types.CallbackQuery):
                         await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
                 if current_question.id == 1127:
                     await handle_special_question_1127(user_state, user_answer)
+                if current_question.id == 2100:
+                    await handle_special_question_2100(user_state, user_answer)
+                if current_question.id == 2102:
+                    await handle_special_question_2102(user_state, user_answer)
+                if current_question.id == 2104:
+                    await handle_special_question_2104(user_state, user_answer)
+                # if current_question.id == 2112:
+                #     next_question_id = handle_question_2121(user_state)
                 if current_question.id == 1165:
                     next_question_id = await process_unconfigured_nodes_count(user_state, current_question)
                     if next_question_id is not None:
@@ -292,13 +363,12 @@ async def hi_message(callback_query: types.CallbackQuery):
                     if answer_type.name == "TEXT":
                         next_question_id = current_question.next_question_id
                         if next_question_id is not None:
-                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query, user_answer)
-
+                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
                     elif answer_type.name == "CHOICE":
                         # Обработка ответа типа "выбор"
                         next_question_id = current_question.answer_options[user_answer]
                         if next_question_id is not None:
-                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query, user_answer)
+                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
 
                     elif answer_type.name == "FILE":
                         # Обработка ответа типа "файл"
@@ -310,7 +380,7 @@ async def hi_message(callback_query: types.CallbackQuery):
                         else:
                             next_question_id = current_question.next_question_id
                         if next_question_id is not None:
-                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query, user_answer)
+                            await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
 
 
 
