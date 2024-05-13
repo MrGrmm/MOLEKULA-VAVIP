@@ -94,7 +94,7 @@ class UserState(Model):
     id = fields.IntField(pk=True)
     user = fields.ForeignKeyField('models.User', related_name='state')
     current_question = fields.ForeignKeyField('models.Question', related_name='state', null=True)
-    context_data = fields.JSONField()  # Это поле может хранить любые дополнительные данные
+    context_data = fields.JSONField(default=dict)  # Это поле может хранить любые дополнительные данные
 
     class Meta:
         table = "user_states"
