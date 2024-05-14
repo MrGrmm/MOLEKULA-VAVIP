@@ -8,9 +8,72 @@ from models import User, Brief, Question, UserState, Answer
 
 
 class QuestionManager:
+    class SpecialQuestions:
+        def __init__(self, parent):
+            self.parent = parent  # Ссылка на экземпляр QuestionManager для доступа к его атрибутам и методам
+
+        async def handle_question_1(self, answer, question, callback_query):
+            try:
+                # Обновляем имя пользователя в базе данных
+                self.parent.user.name = answer
+                await self.parent.user.save()
+                # Отправляем подтверждение пользователю
+                await callback_query.answer("Ваше имя было успешно сохранено.")
+            except Exception as e:
+                # В случае ошибки, информируем пользователя
+                await callback_query.answer(f"Произошла ошибка при сохранении вашего имени: {e}")
+                print(f"Error saving user name: {e}")
+
+        async def handle_question_2112(self, answer, question, callback_query):
+            selected_options = self.parent.user_state.context_data.get('selected_answers', [])
+            if not answer == "ЭТО ВСЁ":
+                selected_options.append(answer)
+                self.parent.user_state.context_data['selected_answers'] = selected_options
+                await self.parent.user_state.save()
+                if answer == "ЭЛЕКТРИЧЕСТВО":
+                    return await self.parent.handle_choice_answer(answer, question, callback_query)
+                # Фильтрация вариантов ответа
+                remaining_options = {k: v for k, v in question.answer_options.items() if k not in selected_options or k == "Это всё"}
+                
+                # Подготовка клавиатуры с новыми вариантами ответа
+                keyboard = ReplyKeyboardMarkup(
+                    resize_keyboard=True,
+                    one_time_keyboard=True,
+                    keyboard=[
+                        [KeyboardButton(text=option)] for option in remaining_options
+                    ]
+                )
+                # Задаём вопрос заново с новыми вариантами
+                return await callback_query.answer(question.question, reply_markup=keyboard)
+            
+            else:
+                # Логика завершения вопроса
+                self.parent.user_state.context_data.pop('selected_answers', None)                
+                await self.parent.user_state.save()
+                await self.parent.handle_choice_answer(answer, question, callback_query)
+
+        async def handle_question_2113(self, answer, question, callback_query):
+            next_question_id = question.next_question_id
+            next_question = await self.parent.update_user_state_with_next_question(next_question_id)
+
+            selected_options = self.parent.user_state.context_data.get('selected_answers', [])
+            remaining_options = {k: v for k, v in next_question.answer_options.items() if k not in selected_options or k == "Это всё"}
+            keyboard = ReplyKeyboardMarkup(
+                    resize_keyboard=True,
+                    one_time_keyboard=True,
+                    keyboard=[
+                        [KeyboardButton(text=option)] for option in remaining_options
+                    ]
+                )
+                # Задаём вопрос заново с новыми вариантами
+            return await callback_query.answer(next_question.question, reply_markup=keyboard)
+
+                # Дополнительные методы для других специальных вопросов
+
     def __init__(self, user, user_state):
         self.user = user
         self.user_state = user_state
+        self.special_questions = self.SpecialQuestions(self)
 
     async def process_answer(self, answer, callback_query):
         current_question = await self.fetch_current_question()
@@ -18,6 +81,16 @@ class QuestionManager:
         if not current_question:
             return "Вопрос не найден."
 
+        # Проверка, является ли вопрос специальным
+        if current_question.id in [1, 2112, 2113]:  # ID специальных вопросов
+            method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
+            if method:
+                if current_question.id in [2112, 2113]:
+                    return await method(answer, current_question, callback_query)
+                else:
+                    await method(answer, current_question, callback_query)
+
+        # Обычная обработка ответов
         answer_type = current_question.answer_type.name
         method_name = f"handle_{answer_type.lower()}_answer"
         handler = getattr(self, method_name, self.handle_unknown_answer)
@@ -85,6 +158,26 @@ class QuestionManager:
             return await callback_query.answer(next_question.question, reply_markup=keyboard)
         else:
             return await callback_query.answer(next_question.question)
+        
+
+    async def handle_combo_answer(self, answer, question, callback_query):
+        if answer in question.answer_options:
+            next_question_id = question.answer_options[answer]
+        else:
+            next_question_id = question.next_question_id
+        if next_question_id is not None:
+            next_question = await self.update_user_state_with_next_question(next_question_id)
+            keyboard = await self.answer_keyboard_preparation(next_question)
+        if keyboard is not None:
+            return await callback_query.answer(next_question.question, reply_markup=keyboard)
+        else:
+            return await callback_query.answer(next_question.question)
+
+
+    async def handle_file_answer(self, answer, question, callback_query):
+        await callback_query.answer("Неизвестный тип ответа.")
+        return "Неизвестный тип ответа."
+
 
 
     async def handle_unknown_answer(self, answer, question, callback_query):
@@ -107,6 +200,37 @@ def connect_to_database(db_path='db.sqlite3'):
         return None
     
 db = connect_to_database()
+
+
+
+async def hi_message(callback_query: types.CallbackQuery):
+    try:
+        telegram_user_id = callback_query.from_user.id
+        user = await User.get_or_none(telegram_user_id=telegram_user_id)
+        if not user:
+            await callback_query.answer("Вы не зарегистрированы, для регистрации используйте команду /start")
+            return
+        else:
+            brief = await Brief.filter(user=user).first()
+        # Если брифа ещё нет, то создаём его
+            if not brief:
+                brief = await Brief.create(user=user, created_at=datetime.datetime.now())
+
+        user_state = await UserState.get_or_none(user=user)
+        if not user_state:
+            # Handle new user state scenario.
+            first_question = await Question.filter(id=1).first()
+            if first_question:
+                user_state = await UserState.create(user=user, context_data={}, current_question=first_question)
+                await callback_query.answer(first_question.question)
+            return
+
+        q_manager = QuestionManager(user, user_state)
+        await q_manager.save_user_answer(brief, callback_query)
+        await q_manager.process_answer(callback_query.text, callback_query)
+    except Exception as e:
+        print(f"Error in hi_message: {e}")
+        await callback_query.answer("Произошла ошибка, попробуйте позже.")
 
 
 
@@ -371,38 +495,6 @@ db = connect_to_database()
 #         next_question_id = current_question.next_question_id
 #         if next_question_id is not None:
 #             await set_next_question_and_save_upd(user_state, next_question_id, callback_query)
-
-
-async def hi_message(callback_query: types.CallbackQuery):
-    try:
-        telegram_user_id = callback_query.from_user.id
-        user = await User.get_or_none(telegram_user_id=telegram_user_id)
-        if not user:
-            await callback_query.answer("Вы не зарегистрированы, для регистрации используйте команду /start")
-            return
-        else:
-            brief = await Brief.filter(user=user).first()
-        # Если брифа ещё нет, то создаём его
-            if not brief:
-                brief = await Brief.create(user=user, created_at=datetime.datetime.now())
-
-        user_state = await UserState.get_or_none(user=user)
-        if not user_state:
-            # Handle new user state scenario.
-            first_question = await Question.filter(id=1).first()
-            if first_question:
-                user_state = await UserState.create(user=user, context_data={}, current_question=first_question)
-                await callback_query.answer(first_question.question)
-            return
-
-        q_manager = QuestionManager(user, user_state)
-        await q_manager.save_user_answer(brief, callback_query)
-        response_message = await q_manager.process_answer(callback_query.text, callback_query)
-        await callback_query.answer(response_message)
-    except Exception as e:
-        print(f"Error in hi_message: {e}")
-        await callback_query.answer("Произошла ошибка, попробуйте позже.")
-
 
 
 
