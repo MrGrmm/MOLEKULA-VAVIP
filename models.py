@@ -25,6 +25,9 @@ class AnswerType(Enum):
     COMBO = "комбинированный"
 
 
+
+
+
 class User(Model):
     id = fields.IntField(pk=True)
     telegram_user_id = fields.IntField(unique=True)
@@ -98,3 +101,5 @@ class UserState(Model):
 
     class Meta:
         table = "user_states"
+
+

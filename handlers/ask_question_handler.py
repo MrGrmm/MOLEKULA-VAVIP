@@ -1,11 +1,13 @@
 from aiogram import types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-import json
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile
+
 import sqlite3
 import datetime
 from models import User, Brief, Question, UserState, Answer
-from config import API_TOKEN
-import aiohttp
+
+
+
+
 
 
 class QuestionManager:
@@ -13,38 +15,75 @@ class QuestionManager:
         def __init__(self, parent):
             self.parent = parent  # Ссылка на экземпляр QuestionManager для доступа к его атрибутам и методам
 
-        async def handle_question_1(self, answer, question, callback_query):
-            try:
-                # Обновляем имя пользователя в базе данных
-                self.parent.user.name = answer
-                await self.parent.user.save()
-                # Отправляем подтверждение пользователю
-                # await callback_query.answer("Ваше имя было успешно сохранено.")
-            except Exception as e:
-                # В случае ошибки, информируем пользователя
-                await callback_query.answer(f"Произошла ошибка при сохранении вашего имени: {e}")
-                print(f"Error saving user name: {e}")
 
-
-        async def handle_question_2104(self, answer, question, callback_query):
+        async def handle_skip_question(self, message):
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
             # Обновление context_data в зависимости от ответа пользователя
-            self.parent.user_state.context_data.update({"house_floor_count": int(answer)})
+            self.parent.user_state.context_data.update({self.parent.user_state.current_question_id: False})
+
+        async def handle_question_consultation(self, message, current_question):
+        # Предположим, что функция уже имеет доступ к current_question и user_answer
+            if message.text == "Нужна консультация":
+            # Отправляем URL для консультации пользователю, так как предполагается, что он существует
+                await message.answer(current_question.consultation_url)
+
+        async def handle_question_1(self, message):
+            try:
+                # Обновляем имя пользователя в базе данных
+                self.parent.user.name = message.text
+                await self.parent.user.save()
+                # Отправляем подтверждение пользователю
+                # await message.answer("Ваше имя было успешно сохранено.")
+            except Exception as e:
+                # В случае ошибки, информируем пользователя
+                await message.answer(f"Произошла ошибка при сохранении вашего имени: {e}")
+                print(f"Error saving user name: {e}")
+
+        async def handle_special_question_2100(user_state, user_answer):
+            # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+            if not user_state.context_data:
+                user_state.context_data = {}
+            # Обновление context_data в зависимости от ответа пользователя
+            if user_answer == "ДА" or user_answer == "ПЛАНИРУЕТСЯ":
+                user_state.context_data.update({"architectural_project": False})
+                
+            # Сохранение обновленного состояния в базу данных
+            await user_state.save()
+            print("Context data updated:", user_state.context_data)
+
+
+        async def handle_special_question_2102(user_state, user_answer):
+            # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+            if not user_state.context_data:
+                user_state.context_data = {}
+            # Обновление context_data в зависимости от ответа пользователя
+            if user_answer == "ДА" or user_answer == "ПЛАНИРУЕТСЯ":
+                user_state.context_data.update({"design_project": False})
+                
+            # Сохранение обновленного состояния в базу данных
+            await user_state.save()
+            print("Context data updated:", user_state.context_data)
+
+        async def handle_question_2104(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            # Обновление context_data в зависимости от ответа пользователя
+            self.parent.user_state.context_data.update({"house_floor_count": int(message.text)})
             # Сохранение обновленного состояния в базу данных
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
 
 
 
-        async def handle_question_2112(self, answer, question, callback_query):
+        async def handle_question_2112(self, question, message):
             selected_options = self.parent.user_state.context_data.get('selected_answers', [])
-            if not answer == "ЭТО ВСЁ":
-                selected_options.append(answer)
+            if not message.text == "ЭТО ВСЁ":
+                selected_options.append(message.text)
                 self.parent.user_state.context_data['selected_answers'] = selected_options
                 await self.parent.user_state.save()
-                if answer == "ЭЛЕКТРИЧЕСТВО":
-                    return await self.parent.handle_choice_answer(answer, question, callback_query)
+                if message.text == "ЭЛЕКТРИЧЕСТВО":
+                    return await self.parent.handle_choice_answer(question, message)
                 # Фильтрация вариантов ответа
                 remaining_options = {k: v for k, v in question.answer_options.items() if k not in selected_options or k == "Это всё"}
                 
@@ -57,13 +96,13 @@ class QuestionManager:
                     ]
                 )
                 # Задаём вопрос заново с новыми вариантами
-                return await callback_query.answer(question.question, reply_markup=keyboard)
+                return await message.answer(question.question, reply_markup=keyboard)
             
             else:
                 # Логика завершения вопроса
-                await self.parent.handle_choice_answer(answer, question, callback_query)
+                await self.parent.handle_choice_answer(question, message)
 
-        async def handle_question_2113(self, answer, question, callback_query):
+        async def handle_question_2113(self, question, message):
             next_question_id = question.next_question_id
             next_question = await self.parent.update_user_state_with_next_question(next_question_id)
 
@@ -77,11 +116,11 @@ class QuestionManager:
                     ]
                 )
                 # Задаём вопрос заново с новыми вариантами
-            return await callback_query.answer(next_question.question, reply_markup=keyboard)
+            return await message.answer(next_question.question, reply_markup=keyboard)
 
                 # Дополнительные методы для других специальных вопросов
 
-        async def handle_question_2121(self, answer, question, callback_query):
+        async def handle_question_2121(self, question, message):
     # Получаем текущее количество повторений из context_data
             repeats_remaining = self.parent.user_state.context_data.get('house_floor_count', 1)
 
@@ -94,17 +133,17 @@ class QuestionManager:
                 keyboard = await self.parent.answer_keyboard_preparation(question)
 
                 # Повторяем вопрос
-                await callback_query.answer(question.question, reply_markup=keyboard)
+                await message.answer(question.question, reply_markup=keyboard)
             else:
                 # Переходим к следующему вопросу или завершаем, если повторения закончились
                 self.parent.user_state.context_data.pop('house_floor_count', None)                
                 await self.parent.user_state.save()
-                await self.parent.handle_combo_answer(answer, question, callback_query)
+                await self.parent.handle_combo_answer(question, message)
                 
-        async def handle_question_2127(self, answer, question, callback_query):
+        async def handle_question_2127(self, question, message):
             selected_options = self.parent.user_state.context_data.get('selected_answers', [])
-            if not answer == "ЭТО ВСЁ, ПРОДОЛЖИТЬ!":
-                selected_options.append(answer)
+            if not message.text == "ЭТО ВСЁ, ПРОДОЛЖИТЬ!":
+                selected_options.append(message.text)
                 self.parent.user_state.context_data['selected_answers'] = selected_options
                 await self.parent.user_state.save()
                 # Фильтрация вариантов ответа
@@ -119,13 +158,13 @@ class QuestionManager:
                     ]
                 )
                 # Задаём вопрос заново с новыми вариантами
-                return await callback_query.answer(question.question, reply_markup=keyboard)
+                return await message.answer(question.question, reply_markup=keyboard)
             
             else:
                 # Логика завершения вопроса
                 self.parent.user_state.context_data.pop('selected_answers', None)                
                 await self.parent.user_state.save()
-                await self.parent.handle_choice_answer(answer, question, callback_query)
+                await self.parent.handle_choice_answer(question, message)
         
 
     def __init__(self, user, user_state):
@@ -133,26 +172,34 @@ class QuestionManager:
         self.user_state = user_state
         self.special_questions = self.SpecialQuestions(self)
 
-    async def process_answer(self, answer, callback_query):
+
+    async def process_answer(self, brief, message):
+
+        await self.save_user_answer(brief, message)
+
         current_question = await self.fetch_current_question()
 
         if not current_question:
             return "Вопрос не найден."
-
+        if message.text == "Нужна консультация":
+            return await self.special_questions.handle_question_consultation(message, current_question)
+        elif message.text == "ПРОПУСТИТЬ":
+            await self.special_questions.handle_skip_question(message)
         # Проверка, является ли вопрос специальным
-        if current_question.id in [1, 2104, 2112, 2113, 2121, 2127]:  # ID специальных вопросов
+        if current_question.id in [1, 2100, 2102, 2104, 2112, 2113, 2121, 2127]:  # ID специальных вопросов
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
                 if current_question.id in [2112, 2113, 2121, 2127]:
-                    return await method(answer, current_question, callback_query)
+                    return await method(current_question, message)
                 else:
-                    await method(answer, current_question, callback_query)
+                    await method(message)
 
         # Обычная обработка ответов
+        
         answer_type = current_question.answer_type.name
         method_name = f"handle_{answer_type.lower()}_answer"
         handler = getattr(self, method_name, self.handle_unknown_answer)
-        return await handler(answer, current_question, callback_query)
+        return await handler(current_question, message)
 
     async def fetch_current_question(self):
         try:
@@ -162,16 +209,20 @@ class QuestionManager:
             print(f"Error fetching question: {e}")
         return None
     
-    async def save_user_answer(self, brief, callback_query):
-
+    async def save_user_answer(self, brief, message):
         current_question = await Question.get_or_none(id=self.user_state.current_question_id)
+
         if current_question is None:
             return "Вопрос не найден."
+        
+        if message.text is None:
+            return await Answer.create(user=self.user, brief=brief, question=current_question, answer='file')                 
+
         try:
-            return await Answer.create(user=self.user, brief=brief, question=current_question, answer=callback_query.text)                 
+            return await Answer.create(user=self.user, brief=brief, question=current_question, answer=message.text)                 
         # Проверка на возможные ошибки которые приведут к тому что запись не произойдёт в базе данных
         except Exception as e:
-            return await callback_query.answer(f"Ошибка: {e}")
+            return await message.answer(f"Ошибка: {e}")
 
 
     async def update_user_state_with_next_question(self, next_question_id):
@@ -199,44 +250,80 @@ class QuestionManager:
             )
             return answer_kb
 
-    async def handle_text_answer(self, answer, current_question, callback_query):
+    async def handle_text_answer(self, current_question, message):
         next_question_id = current_question.next_question_id
         next_question = await self.update_user_state_with_next_question(next_question_id)
         keyboard = await self.answer_keyboard_preparation(next_question)
+        if next_question.image_url:
+                await message.answer_photo(photo=FSInputFile("img/shema_razvodki_radiatora.jpg"))
         if keyboard is not None:
-            return await callback_query.answer(next_question.question, reply_markup=keyboard)
+            return await message.answer(next_question.question, reply_markup=keyboard)
         else:
-            return await callback_query.answer(next_question.question)
+            return await message.answer(next_question.question)
 
-    async def handle_choice_answer(self, answer, question, callback_query):
-        next_question_id = question.answer_options.get(answer)
+    async def handle_choice_answer(self, question, message):
+        next_question_id = question.answer_options.get(message.text)
         next_question = await self.update_user_state_with_next_question(next_question_id)
         keyboard = await self.answer_keyboard_preparation(next_question)
+        if next_question.image_url:
+                await message.answer_photo(photo=FSInputFile("img/shema_razvodki_radiatora.jpg"))
         if keyboard is not None:
-            return await callback_query.answer(next_question.question, reply_markup=keyboard)
+            return await message.answer(next_question.question, reply_markup=keyboard)
         else:
-            return await callback_query.answer(next_question.question)
+            return await message.answer(next_question.question)
         
 
-    async def handle_combo_answer(self, answer, question, callback_query):
-        if answer in question.answer_options:
-            next_question_id = question.answer_options[answer]
+    async def handle_combo_answer(self, question, message: types.Message):
+        
+        if message.text is not None:
+            if message.text in question.answer_options:
+                next_question_id = question.answer_options[message.text]
+            else:
+                next_question_id = question.next_question_id
+            if next_question_id is not None:
+                next_question = await self.update_user_state_with_next_question(next_question_id)
+                keyboard = await self.answer_keyboard_preparation(next_question)
+            if next_question.image_url:
+
+                await message.answer_photo(photo=FSInputFile("img/shema_razvodki_radiatora.jpg"))
+            if keyboard is not None:
+                return await message.answer(next_question.question, reply_markup=keyboard)
+            else:
+                return await message.answer(next_question.question)
         else:
+            await message.send_copy(chat_id=6977727803)
+
+        #TODO Отправка данных о пользователе
+            user_data = f"Name: {self.user.name}, Telegram ID: {self.user.telegram_user_id}"
+            
+            
             next_question_id = question.next_question_id
+            if next_question_id is not None:
+                next_question = await self.update_user_state_with_next_question(next_question_id)
+                keyboard = await self.answer_keyboard_preparation(next_question)
+                if keyboard is not None:
+                    return await message.answer(next_question.question, reply_markup=keyboard)
+                else:
+                    return await message.answer(next_question.question)
+
+
+    async def handle_file_answer(self, question, message: types.Message):
+        await message.send_copy(chat_id=6977727803)
+        user_data = f"Name: {self.user.name}, Telegram ID: {self.user.telegram_user_id}"
+        next_question_id = question.next_question_id
         if next_question_id is not None:
             next_question = await self.update_user_state_with_next_question(next_question_id)
             keyboard = await self.answer_keyboard_preparation(next_question)
+        if next_question.image_url:
+            await message.answer_photo(photo=FSInputFile("img/shema_razvodki_radiatora.jpg"))
         if keyboard is not None:
-            return await callback_query.answer(next_question.question, reply_markup=keyboard)
+            return await message.answer(next_question.question, reply_markup=keyboard)
         else:
-            return await callback_query.answer(next_question.question)
+            return await message.answer(next_question.question)
 
 
-    async def handle_file_answer(self, message, state: FSMContext):
-        pass
-
-    async def handle_unknown_answer(self, answer, question, callback_query):
-        await callback_query.answer("Неизвестный тип ответа.")
+    async def handle_unknown_answer(self, message):
+        await message.answer("Неизвестный тип ответа.")
         return "Неизвестный тип ответа."
 
 
@@ -258,12 +345,12 @@ db = connect_to_database()
 
 
 
-async def hi_message(callback_query: types.CallbackQuery):
+async def hi_message(message: types.Message):
     try:
-        telegram_user_id = callback_query.from_user.id
+        telegram_user_id = message.from_user.id
         user = await User.get_or_none(telegram_user_id=telegram_user_id)
         if not user:
-            await callback_query.answer("Вы не зарегистрированы, для регистрации используйте команду /start")
+            await message.answer("Вы не зарегистрированы, для регистрации используйте команду /start")
             return
         else:
             brief = await Brief.filter(user=user).first()
@@ -277,13 +364,13 @@ async def hi_message(callback_query: types.CallbackQuery):
             first_question = await Question.filter(id=1).first()
             if first_question:
                 user_state = await UserState.create(user=user, context_data={}, current_question=first_question)
-                await callback_query.answer(first_question.question)
+                await message.answer(first_question.question)
             return
 
         q_manager = QuestionManager(user, user_state)
-        await q_manager.save_user_answer(brief, callback_query)
-        await q_manager.process_answer(callback_query.text, callback_query)
+        await q_manager.process_answer(brief, message)
+
     except Exception as e:
         print(f"Error in hi_message: {e}")
-        await callback_query.answer("Произошла ошибка, попробуйте позже.")
+        await message.answer("Произошла ошибка, попробуйте позже.")
 

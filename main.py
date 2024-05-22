@@ -13,6 +13,7 @@ from db import init
 from handlers import command_start_handler, echo_handler, hi_message
 
 
+
 bot = Bot(API_TOKEN, parse_mode=ParseMode.HTML)
 
 # Создание роутера и регистрация обработчиков сообщений
@@ -22,7 +23,9 @@ router = Router()
 dp = Dispatcher()
 dp.include_router(router)
 
+
 router.message.register(command_start_handler, CommandStart())
+# router.message.register(file_handler, content_types=types.ContentType.PHOTO)
 router.message.register(hi_message)
 router.message.register(echo_handler)
 
