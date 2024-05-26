@@ -47,6 +47,16 @@ class QuestionManager:
                 await message.answer(f"Произошла ошибка при сохранении вашего имени: {e}")
                 print(f"Error saving user name: {e}")
 
+        async def handle_question_1100(self, message):
+            # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            # Обновление context_data в зависимости от ответа пользователя
+            if not message.text == "Нужна консультация":
+                self.parent.user_state.context_data.update({"unconfigured_node_count": int(message.text)})
+            # Сохранение обновленного состояния в базу данных
+            await self.parent.user_state.save()
+            print("Context data updated:", self.parent.user_state.context_data)
 
         async def handle_question_1127(self, message):
             if not self.parent.user_state.context_data:
@@ -250,7 +260,7 @@ class QuestionManager:
         elif message.text == "ПРОПУСТИТЬ":
             await self.special_questions.handle_skip_question(message)
         # Проверка, является ли вопрос специальным
-        if current_question.id in [1, 2100, 2102, 2104, 2112, 2113, 2121, 2127, 1127, 1429] :  # ID специальных вопросов
+        if current_question.id in [1, 1100, 1127, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
                 if current_question.id in [2112, 2113, 2121, 2127]:
