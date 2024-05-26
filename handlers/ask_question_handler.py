@@ -16,6 +16,8 @@ class QuestionManager:
             self.parent = parent  # Ссылка на экземпляр QuestionManager для доступа к его атрибутам и методам
 
 
+
+
         async def handle_skip_question(self, message):
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
@@ -23,10 +25,15 @@ class QuestionManager:
             self.parent.user_state.context_data.update({self.parent.user_state.current_question_id: False})
 
         async def handle_question_consultation(self, message, current_question):
+            if current_question.image_url:
+                await message.answer_photo(photo=FSInputFile("img/shema_razvodki_radiatora.jpg"))
         # Предположим, что функция уже имеет доступ к current_question и user_answer
             if message.text == "Нужна консультация":
-            # Отправляем URL для консультации пользователю, так как предполагается, что он существует
+            # Отправляем URL для консультации пользователю, так как предполагается, что он существует            
                 await message.answer(current_question.consultation_url)
+
+                
+
 
         async def handle_question_1(self, message):
             try:
@@ -39,6 +46,63 @@ class QuestionManager:
                 # В случае ошибки, информируем пользователя
                 await message.answer(f"Произошла ошибка при сохранении вашего имени: {e}")
                 print(f"Error saving user name: {e}")
+
+
+        async def handle_question_1127(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            if message.text == "Проточный":
+                self.parent.user_state.context_data.update({"waterhater_branch": "Проточный"})
+            elif message.text == "Накопительный":
+                self.parent.user_state.context_data.update({"waterhater_branch": "Накопительный"})
+
+        
+
+        async def handle_question_1132(self, question, message):
+            waterhater_branch = self.parent.user_state.context_data.get('waterhater_branch')
+            if waterhater_branch == "Проточный":
+                next_question_id = self.parent.user_state.current_question_id = 1132
+                next_question = await self.parent.update_user_state_with_next_question(next_question_id)
+                keyboard = await self.parent.answer_keyboard_preparation(next_question)
+                if next_question.image_url != "":
+                        await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
+                if keyboard is not None:
+                    return await message.answer(next_question.question, reply_markup=keyboard)
+                else:
+                    return await message.answer(next_question.question)
+            elif waterhater_branch == "Накопительный":
+                next_question_id = self.parent.user_state.current_question_id = 1138
+                next_question = await self.parent.update_user_state_with_next_question(next_question_id)
+                keyboard = await self.parent.answer_keyboard_preparation(next_question)
+                if next_question.image_url != "":
+                        await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
+                if keyboard is not None:
+                    return await message.answer(next_question.question, reply_markup=keyboard)
+                else:
+                    return await message.answer(next_question.question)
+
+        async def handle_question_1429(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            if message.text == "Проточный":
+                self.parent.user_state.context_data.update({"waterhater_branch": "Проточный"})
+            elif message.text == "Накопительбный":
+                self.parent.user_state.context_data.update({"waterhater_branch": "Накопительбный"})
+            elif message.text == "У меня газовая колонка":
+                self.parent.user_state.context_data.update({"waterhater_branch": "У меня газовая колонка"})
+        
+
+        async def handle_question_1434(self, question, message):
+            if self.parent.user_state.context_data == "Проточный":
+                self.parent.user_state.current_question_id.update(1434)
+                await self.parent.handle_choice_answer(question, message)
+            elif self.parent.user_state.context_data == "Накопительбный":
+                self.parent.user_state.current_question_id.update(1140)
+                await self.parent.handle_choice_answer(question, message)
+            elif self.parent.user_state.context_data == "У меня газовая колонка":
+                self.parent.user_state.current_question_id.update(1144)
+                await self.parent.handle_choice_answer(question, message)
+
 
         async def handle_special_question_2100(user_state, user_answer):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
@@ -186,7 +250,7 @@ class QuestionManager:
         elif message.text == "ПРОПУСТИТЬ":
             await self.special_questions.handle_skip_question(message)
         # Проверка, является ли вопрос специальным
-        if current_question.id in [1, 2100, 2102, 2104, 2112, 2113, 2121, 2127]:  # ID специальных вопросов
+        if current_question.id in [1, 2100, 2102, 2104, 2112, 2113, 2121, 2127, 1127, 1429] :  # ID специальных вопросов
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
                 if current_question.id in [2112, 2113, 2121, 2127]:
@@ -255,18 +319,20 @@ class QuestionManager:
         next_question = await self.update_user_state_with_next_question(next_question_id)
         keyboard = await self.answer_keyboard_preparation(next_question)
         if next_question.image_url:
-                await message.answer_photo(photo=FSInputFile("img/shema_razvodki_radiatora.jpg"))
+                await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         if keyboard is not None:
             return await message.answer(next_question.question, reply_markup=keyboard)
         else:
             return await message.answer(next_question.question)
 
     async def handle_choice_answer(self, question, message):
-        next_question_id = question.answer_options.get(message.text)
+        next_question_id = question.answer_options[message.text]
+        if next_question_id == 1132:
+            return await self.special_questions.handle_question_1132(question, message)
         next_question = await self.update_user_state_with_next_question(next_question_id)
         keyboard = await self.answer_keyboard_preparation(next_question)
-        if next_question.image_url:
-                await message.answer_photo(photo=FSInputFile("img/shema_razvodki_radiatora.jpg"))
+        if next_question.image_url != "":
+                await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         if keyboard is not None:
             return await message.answer(next_question.question, reply_markup=keyboard)
         else:
@@ -281,11 +347,13 @@ class QuestionManager:
             else:
                 next_question_id = question.next_question_id
             if next_question_id is not None:
+                if next_question_id == 1132:
+                    return await self.special_questions.handle_question_1132(question, message)
                 next_question = await self.update_user_state_with_next_question(next_question_id)
                 keyboard = await self.answer_keyboard_preparation(next_question)
             if next_question.image_url:
 
-                await message.answer_photo(photo=FSInputFile("img/shema_razvodki_radiatora.jpg"))
+                await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
             if keyboard is not None:
                 return await message.answer(next_question.question, reply_markup=keyboard)
             else:
@@ -299,6 +367,8 @@ class QuestionManager:
             
             next_question_id = question.next_question_id
             if next_question_id is not None:
+                if next_question_id == 1132:
+                    return await self.special_questions.handle_question_1132(question, message)
                 next_question = await self.update_user_state_with_next_question(next_question_id)
                 keyboard = await self.answer_keyboard_preparation(next_question)
                 if keyboard is not None:
@@ -315,7 +385,7 @@ class QuestionManager:
             next_question = await self.update_user_state_with_next_question(next_question_id)
             keyboard = await self.answer_keyboard_preparation(next_question)
         if next_question.image_url:
-            await message.answer_photo(photo=FSInputFile("img/shema_razvodki_radiatora.jpg"))
+            await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         if keyboard is not None:
             return await message.answer(next_question.question, reply_markup=keyboard)
         else:
@@ -345,7 +415,7 @@ db = connect_to_database()
 
 
 
-async def hi_message(message: types.Message):
+async def hi_message(message: types.Message):   
     try:
         telegram_user_id = message.from_user.id
         user = await User.get_or_none(telegram_user_id=telegram_user_id)
