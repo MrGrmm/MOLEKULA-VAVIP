@@ -35,6 +35,7 @@ router.message.register(echo_handler)
 async def start_bot():
     try:
         await init() # Предполагаемая функция для инициализации, например подключение к БД
+        await bot.delete_webhook(drop_pending_updates=True)   # Удаляет сообщения что были получены ботом пока о н был оффлайн
         await dp.start_polling(bot)
     except KeyboardInterrupt:
         logging.info('Остановка бота...')

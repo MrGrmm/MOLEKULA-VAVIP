@@ -7,14 +7,10 @@ from models import User, Brief, Question, UserState, Answer
 
 
 
-
-
-
 class QuestionManager:
     class SpecialQuestions:
         def __init__(self, parent):
             self.parent = parent  # Ссылка на экземпляр QuestionManager для доступа к его атрибутам и методам
-
 
 
 
@@ -34,7 +30,6 @@ class QuestionManager:
 
                 
 
-
         async def handle_question_1(self, message):
             try:
                 # Обновляем имя пользователя в базе данных
@@ -47,6 +42,66 @@ class QuestionManager:
                 await message.answer(f"Произошла ошибка при сохранении вашего имени: {e}")
                 print(f"Error saving user name: {e}")
 
+        async def handle_question_5(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            if message.text == "ДА":
+                self.parent.user_state.context_data.update({"project_needed": ["Узел ввода", "Канализация", "Отопление", "Водоснабжение"]})
+
+        async def handle_question_6(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            if message.text == "ДА":
+                project_needed = self.parent.user_state.context_data.get("project_needed", [])
+                if "Узел ввода" not in project_needed:
+                    project_needed.append("Узел ввода")
+                self.parent.user_state.context_data.update({"project_needed": project_needed})
+
+        async def handle_question_7(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            if message.text == "ДА":
+                project_needed = self.parent.user_state.context_data.get("project_needed", [])
+                if "Канализация" not in project_needed:
+                    project_needed.append("Канализация")
+                self.parent.user_state.context_data.update({"project_needed": project_needed})
+
+        async def handle_question_8(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            if message.text == "ДА":
+                project_needed = self.parent.user_state.context_data.get("project_needed", [])
+                if "Отопление" not in project_needed:
+                    project_needed.append("Отопление")
+                self.parent.user_state.context_data.update({"project_needed": project_needed})
+
+        async def handle_question_9(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            if message.text == "ДА":
+                project_needed = self.parent.user_state.context_data.get("project_needed", [])
+                if "Водоснабжение" not in project_needed:
+                    project_needed.append("Водоснабжение")
+                self.parent.user_state.context_data.update({"project_needed": project_needed})
+
+        async def handle_question_50_branch(self, question, message):
+            selected_options = self.parent.user_state.context_data.get('project_needed', [])
+
+            # Создание клавиатуры с кнопками
+
+            keyboard = ReplyKeyboardMarkup(
+                    resize_keyboard=True,
+                    one_time_keyboard=True,
+                    keyboard=[
+                        [KeyboardButton(text=option)] for option in selected_options
+                    ]
+                )
+
+
+            # Отправка сообщения с клавиатурой
+            return keyboard
+                    
+
         async def handle_question_1100(self, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
             if not self.parent.user_state.context_data:
@@ -57,6 +112,12 @@ class QuestionManager:
             # Сохранение обновленного состояния в базу данных
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
+
+        async def handle_question_1105(self, message):
+            node_count =  self.parent.user_state.context_data.unconfigured_node_count
+            print(node_count)
+            pass
+
 
         async def handle_question_1127(self, message):
             if not self.parent.user_state.context_data:
@@ -91,6 +152,17 @@ class QuestionManager:
                 else:
                     return await message.answer(next_question.question)
 
+        async def handle_question_1401(self, message):
+            # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            # Обновление context_data в зависимости от ответа пользователя
+            if not message.text == "Нужна консультация":
+                self.parent.user_state.context_data.update({"unconfigured_node_count": int(message.text)})
+            # Сохранение обновленного состояния в базу данных
+            await self.parent.user_state.save()
+            print("Context data updated:", self.parent.user_state.context_data)
+
         async def handle_question_1429(self, message):
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
@@ -103,15 +175,37 @@ class QuestionManager:
         
 
         async def handle_question_1434(self, question, message):
-            if self.parent.user_state.context_data == "Проточный":
-                self.parent.user_state.current_question_id.update(1434)
-                await self.parent.handle_choice_answer(question, message)
-            elif self.parent.user_state.context_data == "Накопительбный":
-                self.parent.user_state.current_question_id.update(1140)
-                await self.parent.handle_choice_answer(question, message)
-            elif self.parent.user_state.context_data == "У меня газовая колонка":
-                self.parent.user_state.current_question_id.update(1144)
-                await self.parent.handle_choice_answer(question, message)
+            waterhater_branch = self.parent.user_state.context_data.get('waterhater_branch')
+            if waterhater_branch == "Проточный":
+                next_question_id = self.parent.user_state.current_question_id = 1434
+                next_question = await self.parent.update_user_state_with_next_question(next_question_id)
+                keyboard = await self.parent.answer_keyboard_preparation(next_question)
+                if next_question.image_url != "":
+                        await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
+                if keyboard is not None:
+                    return await message.answer(next_question.question, reply_markup=keyboard)
+                else:
+                    return await message.answer(next_question.question)
+            elif waterhater_branch == "Накопительный":
+                next_question_id = self.parent.user_state.current_question_id = 1440
+                next_question = await self.parent.update_user_state_with_next_question(next_question_id)
+                keyboard = await self.parent.answer_keyboard_preparation(next_question)
+                if next_question.image_url != "":
+                        await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
+                if keyboard is not None:
+                    return await message.answer(next_question.question, reply_markup=keyboard)
+                else:
+                    return await message.answer(next_question.question)
+            elif waterhater_branch == "У меня газовая колонка":
+                next_question_id = self.parent.user_state.current_question_id = 1444
+                next_question = await self.parent.update_user_state_with_next_question(next_question_id)
+                keyboard = await self.parent.answer_keyboard_preparation(next_question)
+                if next_question.image_url != "":
+                        await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
+                if keyboard is not None:
+                    return await message.answer(next_question.question, reply_markup=keyboard)
+                else:
+                    return await message.answer(next_question.question)
 
 
         async def handle_special_question_2100(user_state, user_answer):
@@ -260,7 +354,7 @@ class QuestionManager:
         elif message.text == "ПРОПУСТИТЬ":
             await self.special_questions.handle_skip_question(message)
         # Проверка, является ли вопрос специальным
-        if current_question.id in [1, 1100, 1127, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
+        if current_question.id in [1, 5, 6, 7, 8, 9, 1100, 1105, 1127, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
                 if current_question.id in [2112, 2113, 2121, 2127]:
@@ -311,6 +405,8 @@ class QuestionManager:
         return next_question
 
     async def answer_keyboard_preparation(self, next_question):
+        if next_question.id == 50:
+            return await self.special_questions.handle_question_50_branch(next_question, self.user_state)
         if not next_question.answer_options:
             return None
         else:
@@ -453,4 +549,3 @@ async def hi_message(message: types.Message):
     except Exception as e:
         print(f"Error in hi_message: {e}")
         await message.answer("Произошла ошибка, попробуйте позже.")
-
