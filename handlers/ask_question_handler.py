@@ -113,11 +113,93 @@ class QuestionManager:
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
 
-        async def handle_question_1105(self, message):
-            node_count =  self.parent.user_state.context_data.unconfigured_node_count
-            print(node_count)
-            pass
+        async def handle_question_1101(self, message):
+            # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            # Обновление context_data в зависимости от ответа пользователя
+            if not message.text == "Нужна консультация":
+                self.parent.user_state.context_data.update({"unconfigured_bathroom_count": int(message.text)})
+            # Сохранение обновленного состояния в базу данных
+            await self.parent.user_state.save()
+            print("Context data updated:", self.parent.user_state.context_data)
 
+        async def handle_question_1102(self, message):
+            # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            # Обновление context_data в зависимости от ответа пользователя
+            if not message.text == "Нужна консультация":
+                self.parent.user_state.context_data.update({"unconfigured_kitchen_count": int(message.text)})
+            # Сохранение обновленного состояния в базу данных
+            await self.parent.user_state.save()
+            print("Context data updated:", self.parent.user_state.context_data)
+
+        async def handle_question_1103(self, message):
+            # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            # Обновление context_data в зависимости от ответа пользователя
+            if not message.text == "Нужна консультация":
+                self.parent.user_state.context_data.update({"unconfigured_laundries_count": int(message.text)})
+            # Сохранение обновленного состояния в базу данных
+            await self.parent.user_state.save()
+            print("Context data updated:", self.parent.user_state.context_data)
+
+        async def handle_question_1104(self, message):
+            # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            # Обновление context_data в зависимости от ответа пользователя
+            if message.text is int:
+                self.parent.user_state.context_data.update({"unconfigured_wetroom_count": int(message.text)})
+            else:
+                self.parent.user_state.context_data.update({"unconfigured_wetroom_count": int(0)})
+
+            # Сохранение обновленного состояния в базу данных
+            await self.parent.user_state.save()
+            print("Context data updated:", self.parent.user_state.context_data)
+
+
+        async def handle_question_1105(self, question, message):
+            node_count =  self.parent.user_state.context_data.get("unconfigured_node_count", None)
+            if node_count <= 1:
+                next_question_id = 1109
+            elif node_count > 1:
+                node_count -= 1
+                self.parent.user_state.context_data.update({"unconfigured_node_count": int(node_count)})
+                next_question_id = question.answer_options[message.text]
+            else:
+                return print("ERROR in handle_question_1105")
+            
+            await self.parent.user_state.save()
+            next_question = await self.parent.update_user_state_with_next_question(next_question_id)
+            keyboard = await self.parent.answer_keyboard_preparation(next_question)
+            if next_question.image_url != "":
+                    await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
+            if keyboard is not None:
+                return await message.answer(next_question.question, reply_markup=keyboard)
+            else:
+                return await message.answer(next_question.question)
+            
+
+        async def handle_question_1109(self, question, message):
+            bathroom_count =  self.parent.user_state.context_data.get("unconfigured_bathroom_count", None)
+            if bathroom_count is not None and bathroom_count > 0:
+                bathroom_count -= 1
+                self.parent.user_state.context_data.update({"unconfigured_node_count": int(bathroom_count)})
+                next_question_id = 1109
+            else:
+                pass
+            await self.parent.user_state.save()
+            next_question = await self.parent.update_user_state_with_next_question(next_question_id)
+            keyboard = await self.parent.answer_keyboard_preparation(next_question)
+            if next_question.image_url != "":
+                    await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
+            if keyboard is not None:
+                return await message.answer(next_question.question, reply_markup=keyboard)
+            else:
+                return await message.answer(next_question.question)
 
         async def handle_question_1127(self, message):
             if not self.parent.user_state.context_data:
@@ -354,7 +436,7 @@ class QuestionManager:
         elif message.text == "ПРОПУСТИТЬ":
             await self.special_questions.handle_skip_question(message)
         # Проверка, является ли вопрос специальным
-        if current_question.id in [1, 5, 6, 7, 8, 9, 1100, 1105, 1127, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
+        if current_question.id in [1, 5, 6, 7, 8, 9, 1100, 1101, 1102, 1103, 1104, 1127, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
                 if current_question.id in [2112, 2113, 2121, 2127]:
@@ -453,12 +535,13 @@ class QuestionManager:
             else:
                 next_question_id = question.next_question_id
             if next_question_id is not None:
+                if next_question_id == 1105:
+                    return await self.special_questions.handle_question_1105(question, message)
                 if next_question_id == 1132:
                     return await self.special_questions.handle_question_1132(question, message)
                 next_question = await self.update_user_state_with_next_question(next_question_id)
                 keyboard = await self.answer_keyboard_preparation(next_question)
             if next_question.image_url:
-
                 await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
             if keyboard is not None:
                 return await message.answer(next_question.question, reply_markup=keyboard)
