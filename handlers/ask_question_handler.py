@@ -1,6 +1,7 @@
 from aiogram import types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile
 
+import re
 import sqlite3
 import datetime
 from models import User, Brief, Question, UserState, Answer
@@ -12,7 +13,9 @@ class QuestionManager:
         def __init__(self, parent):
             self.parent = parent  # Ссылка на экземпляр QuestionManager для доступа к его атрибутам и методам
 
-
+        def create_unconfigured_nodes(self, node_count):
+            for i in range(1, node_count + 1):
+                self.parent.user_state.context_data.update({f'unconfigured_node_{i}': None }) # Или любое другое значение по умолчанию
 
         async def handle_skip_question(self, message):
             if not self.parent.user_state.context_data:
@@ -108,8 +111,12 @@ class QuestionManager:
                 self.parent.user_state.context_data = {}
             # Обновление context_data в зависимости от ответа пользователя
             if not message.text == "Нужна консультация":
-                self.parent.user_state.context_data.update({"unconfigured_node_count": int(message.text)})
+                if message.text == "НЕТ":
+                    self.parent.user_state.context_data.update({"unconfigured_node_count": int(0)})
+                else:
+                    self.parent.user_state.context_data.update({"unconfigured_node_count": int(message.text)})
             # Сохранение обновленного состояния в базу данных
+                self.create_unconfigured_nodes(int(message.text))
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
 
@@ -119,6 +126,7 @@ class QuestionManager:
                 self.parent.user_state.context_data = {}
             # Обновление context_data в зависимости от ответа пользователя
             if not message.text == "Нужна консультация":
+                self.parent.user_state.context_data.update({"total_bathrooms": int(message.text)})
                 self.parent.user_state.context_data.update({"unconfigured_bathroom_count": int(message.text)})
             # Сохранение обновленного состояния в базу данных
             await self.parent.user_state.save()
@@ -130,6 +138,7 @@ class QuestionManager:
                 self.parent.user_state.context_data = {}
             # Обновление context_data в зависимости от ответа пользователя
             if not message.text == "Нужна консультация":
+                self.parent.user_state.context_data.update({"total_kitchens": int(message.text)})
                 self.parent.user_state.context_data.update({"unconfigured_kitchen_count": int(message.text)})
             # Сохранение обновленного состояния в базу данных
             await self.parent.user_state.save()
@@ -141,34 +150,36 @@ class QuestionManager:
                 self.parent.user_state.context_data = {}
             # Обновление context_data в зависимости от ответа пользователя
             if not message.text == "Нужна консультация":
+                self.parent.user_state.context_data.update({"total_laundries": int(message.text)})
                 self.parent.user_state.context_data.update({"unconfigured_laundries_count": int(message.text)})
             # Сохранение обновленного состояния в базу данных
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
 
-        async def handle_question_1104(self, message):
+        async def handle_question_1104(self, question, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
             # Обновление context_data в зависимости от ответа пользователя
             if message.text is int:
+                self.parent.user_state.context_data.update({"total_wetrooms": int(message.text)})
                 self.parent.user_state.context_data.update({"unconfigured_wetroom_count": int(message.text)})
             else:
+                self.parent.user_state.context_data.update({"total_wetrooms": int(0)})
                 self.parent.user_state.context_data.update({"unconfigured_wetroom_count": int(0)})
 
             # Сохранение обновленного состояния в базу данных
-            await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
-
-
-        async def handle_question_1105(self, question, message):
             node_count =  self.parent.user_state.context_data.get("unconfigured_node_count", None)
-            if node_count <= 1:
+            if node_count < 1:
                 next_question_id = 1109
-            elif node_count > 1:
+            elif node_count >= 1:
+                bathroom_count = self.parent.user_state.context_data.get("unconfigured_bathroom_count", None)
+                question_text = f"Вы указали что в квартире {bathroom_count} сан.узлов.\
+                                  Какие сан узлы будут подключатся к первой группе?"
+                next_question_id = question.answer_options[message.text]
                 node_count -= 1
                 self.parent.user_state.context_data.update({"unconfigured_node_count": int(node_count)})
-                next_question_id = question.answer_options[message.text]
             else:
                 return print("ERROR in handle_question_1105")
             
@@ -178,19 +189,44 @@ class QuestionManager:
             if next_question.image_url != "":
                     await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
             if keyboard is not None:
-                return await message.answer(next_question.question, reply_markup=keyboard)
+                return await message.answer(question_text, reply_markup=keyboard)
             else:
-                return await message.answer(next_question.question)
+                return await message.answer(question_text)
+
+
+        async def handle_question_1105(self, message):
+            bathroom_count = self.parent.user_state.context_data.get("unconfigured_bathroom_count", None) 
+            # bathroom_count -= int(message.text)
+            self.parent.user_state.context_data.update({"unconfigured_bathroom_count": int(bathroom_count)})
+            await self.parent.user_state.save()
+
+        
+        async def handle_question_1106(self, message):
+            kitchen_count = self.parent.user_state.context_data.get("unconfigured_kitchen_count", None) 
+            # kitchen_count -= int(message.text)
+            self.parent.user_state.context_data.update({"unconfigured_kitchen_count": int(kitchen_count)})
+            await self.parent.user_state.save()  
+
+
+        async def handle_question_1107(self, message):
+            laundries_count = self.parent.user_state.context_data.get("unconfigured_laundries_count", None) 
+            # laundries_count -= int(message.text)
+            self.parent.user_state.context_data.update({"unconfigured_laundries_count": int(laundries_count)})
+            await self.parent.user_state.save()   
+
+
+        async def handle_question_1108(self, message):
+            pass
             
 
-        async def handle_question_1109(self, question, message):
+        async def handle_question_1109(self, message):
             bathroom_count =  self.parent.user_state.context_data.get("unconfigured_bathroom_count", None)
             if bathroom_count is not None and bathroom_count > 0:
                 bathroom_count -= 1
-                self.parent.user_state.context_data.update({"unconfigured_node_count": int(bathroom_count)})
+                self.parent.user_state.context_data.update({"unconfigured_bathroom_count": int(bathroom_count)})
                 next_question_id = 1109
-            else:
-                pass
+
+
             await self.parent.user_state.save()
             next_question = await self.parent.update_user_state_with_next_question(next_question_id)
             keyboard = await self.parent.answer_keyboard_preparation(next_question)
@@ -200,6 +236,22 @@ class QuestionManager:
                 return await message.answer(next_question.question, reply_markup=keyboard)
             else:
                 return await message.answer(next_question.question)
+
+        
+        async def handle_question_1124(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            
+            if message.text != "Нужна консультация":
+                # Извлекаем численное значение из message.text
+                number_match = re.search(r'\d+', message.text)
+                if number_match:
+                    number_of_residence = int(number_match.group())
+                    self.parent.user_state.context_data.update({"number_of_residence": number_of_residence})
+                else:
+                    await message.answer("Пожалуйста, укажите количество в формате 'до X'")
+            else:
+                await message.answer("Консультация нужна. Что вас интересует?")
 
         async def handle_question_1127(self, message):
             if not self.parent.user_state.context_data:
@@ -233,6 +285,11 @@ class QuestionManager:
                     return await message.answer(next_question.question, reply_markup=keyboard)
                 else:
                     return await message.answer(next_question.question)
+                
+
+        async def handle_question_1142(self, question, message):
+            number_of_residence = self.parent.user_state.context_data.get("number_of_residence", None)
+
 
         async def handle_question_1401(self, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
@@ -290,30 +347,30 @@ class QuestionManager:
                     return await message.answer(next_question.question)
 
 
-        async def handle_special_question_2100(user_state, user_answer):
+        async def handle_question_2100(self, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
-            if not user_state.context_data:
-                user_state.context_data = {}
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
             # Обновление context_data в зависимости от ответа пользователя
-            if user_answer == "ДА" or user_answer == "ПЛАНИРУЕТСЯ":
-                user_state.context_data.update({"architectural_project": False})
+            if message.text == "ДА" or message.text == "ПЛАНИРУЕТСЯ":
+                self.parent.user_state.context_data.update({"architectural_project": False})
                 
             # Сохранение обновленного состояния в базу данных
-            await user_state.save()
-            print("Context data updated:", user_state.context_data)
+            await self.parent.user_state.save()
+            print("Context data updated:", self.parent.user_state.context_data)
 
 
-        async def handle_special_question_2102(user_state, user_answer):
+        async def handle_question_2102(self, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
-            if not user_state.context_data:
-                user_state.context_data = {}
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
             # Обновление context_data в зависимости от ответа пользователя
-            if user_answer == "ДА" or user_answer == "ПЛАНИРУЕТСЯ":
-                user_state.context_data.update({"design_project": False})
+            if message.text == "ДА" or message.text == "ПЛАНИРУЕТСЯ":
+                self.parent.user_state.context_data.update({"design_project": False})
                 
             # Сохранение обновленного состояния в базу данных
-            await user_state.save()
-            print("Context data updated:", user_state.context_data)
+            await self.parent.user_state.save()
+            print("Context data updated:", self.parent.user_state.context_data)
 
         async def handle_question_2104(self, message):
             if not self.parent.user_state.context_data:
@@ -436,10 +493,10 @@ class QuestionManager:
         elif message.text == "ПРОПУСТИТЬ":
             await self.special_questions.handle_skip_question(message)
         # Проверка, является ли вопрос специальным
-        if current_question.id in [1, 5, 6, 7, 8, 9, 1100, 1101, 1102, 1103, 1104, 1127, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
+        if current_question.id in [1, 5, 6, 7, 8, 9, 1100, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1124, 1127, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
-                if current_question.id in [2112, 2113, 2121, 2127]:
+                if current_question.id in [1104, 2112, 2113, 2121, 2127]:
                     return await method(current_question, message)
                 else:
                     await method(message)
@@ -535,8 +592,6 @@ class QuestionManager:
             else:
                 next_question_id = question.next_question_id
             if next_question_id is not None:
-                if next_question_id == 1105:
-                    return await self.special_questions.handle_question_1105(question, message)
                 if next_question_id == 1132:
                     return await self.special_questions.handle_question_1132(question, message)
                 next_question = await self.update_user_state_with_next_question(next_question_id)
@@ -548,7 +603,7 @@ class QuestionManager:
             else:
                 return await message.answer(next_question.question)
         else:
-            await message.send_copy(chat_id=6977727803)
+            await message.send_copy(chat_id=6977727803,)
 
         #TODO Отправка данных о пользователе
             user_data = f"Name: {self.user.name}, Telegram ID: {self.user.telegram_user_id}"
