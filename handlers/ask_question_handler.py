@@ -1,6 +1,7 @@
 from aiogram import types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile
 
+import json
 import re
 import sqlite3
 import datetime
@@ -150,8 +151,8 @@ class QuestionManager:
                 self.parent.user_state.context_data = {}
             # Обновление context_data в зависимости от ответа пользователя
             if not message.text == "Нужна консультация":
-                self.parent.user_state.context_data.update({"total_laundries": int(message.text)})
-                self.parent.user_state.context_data.update({"unconfigured_laundries_count": int(message.text)})
+                self.parent.user_state.context_data.update({"total_laundries": message.text})
+                self.parent.user_state.context_data.update({"unconfigured_laundries_count": message.text})
             # Сохранение обновленного состояния в базу данных
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
@@ -211,8 +212,9 @@ class QuestionManager:
         async def handle_question_1107(self, message):
             laundries_count = self.parent.user_state.context_data.get("unconfigured_laundries_count", None) 
             # laundries_count -= int(message.text)
-            self.parent.user_state.context_data.update({"unconfigured_laundries_count": int(laundries_count)})
-            await self.parent.user_state.save()   
+            if laundries_count:
+                self.parent.user_state.context_data.update({"unconfigured_laundries_count": int(laundries_count)})
+                await self.parent.user_state.save()   
 
 
         async def handle_question_1108(self, message):
@@ -248,8 +250,7 @@ class QuestionManager:
                 if number_match:
                     number_of_residence = int(number_match.group())
                     self.parent.user_state.context_data.update({"number_of_residence": number_of_residence})
-                else:
-                    await message.answer("Пожалуйста, укажите количество в формате 'до X'")
+                await self.parent.user_state.save()
             else:
                 await message.answer("Консультация нужна. Что вас интересует?")
 
@@ -287,8 +288,56 @@ class QuestionManager:
                     return await message.answer(next_question.question)
                 
 
-        async def handle_question_1142(self, question, message):
-            number_of_residence = self.parent.user_state.context_data.get("number_of_residence", None)
+        async def handle_question_1142(self, answers_option):
+            print(f"Original answers_option: {answers_option}")
+            print(f"Type of answers_option: {type(answers_option)}")
+
+            try:
+                number_of_residence = self.parent.user_state.context_data.get("number_of_residence", None)
+                if number_of_residence is None:
+                    print("number_of_residence is None")
+                    return answers_option
+
+                print(f"number_of_residence: {number_of_residence}")
+
+                # Преобразуем строки JSON в словарь Python, если это необходимо
+                if isinstance(answers_option, str):
+                    data = json.loads(answers_option)
+                else:
+                    data = answers_option
+
+                print(f"Loaded data: {data}")
+                print(f"Type of data: {type(data)}")
+
+                # Исключаем варианты ответа в зависимости от количества резиденций
+                if number_of_residence <= 2:
+                        data.pop("1")
+                        print('Removed "1" from data')
+                if 2 < number_of_residence <= 6:
+                    if "1/2" in data:
+                        data.pop("1/2")
+                        print('Removed "1/2" from data')
+                if number_of_residence > 4:
+                    if "1" in data:
+                        data.pop("1")
+                        print('Removed "1" from data')
+                    if "1/2" in data:
+                        data.pop("1/2")
+                        print('Removed "1/2" from data')
+
+                # Преобразуем словарь обратно в JSON-строку, если это необходимо
+                if isinstance(answers_option, str):
+                    update_json_data = json.dumps(data)
+                else:
+                    update_json_data = data
+
+                print(f"Updated data: {update_json_data}")
+                print(f"Type of updated data: {type(update_json_data)}")
+
+                return update_json_data
+            except Exception as e:
+                print(f"Error: {e}")
+                return answers_option
 
 
         async def handle_question_1401(self, message):
@@ -544,12 +593,15 @@ class QuestionManager:
         return next_question
 
     async def answer_keyboard_preparation(self, next_question):
+        
         if next_question.id == 50:
             return await self.special_questions.handle_question_50_branch(next_question, self.user_state)
         if not next_question.answer_options:
             return None
         else:
             answer_options = next_question.answer_options
+            if next_question.id == 1142:
+                answer_options = await self.special_questions.handle_question_1142(answer_options)
             answer_kb = ReplyKeyboardMarkup(
                 resize_keyboard=True,
                 one_time_keyboard=True,
