@@ -289,56 +289,77 @@ class QuestionManager:
                 
 
         async def handle_question_1142(self, answers_option):
-            print(f"Original answers_option: {answers_option}")
-            print(f"Type of answers_option: {type(answers_option)}")
+            # print(f"Original answers_option: {answers_option}")
+            # print(f"Type of answers_option: {type(answers_option)}")
 
-            try:
-                number_of_residence = self.parent.user_state.context_data.get("number_of_residence", None)
-                if number_of_residence is None:
-                    print("number_of_residence is None")
-                    return answers_option
+            # try:
+            #     number_of_residence = self.parent.user_state.context_data.get("number_of_residence", None)
+            #     if number_of_residence is None:
+            #         print("number_of_residence is None")
+            #         return answers_option
 
-                print(f"number_of_residence: {number_of_residence}")
+            #     print(f"number_of_residence: {number_of_residence}")
 
-                # Преобразуем строки JSON в словарь Python, если это необходимо
-                if isinstance(answers_option, str):
-                    data = json.loads(answers_option)
-                else:
-                    data = answers_option
+            #     # Преобразуем строки JSON в словарь Python, если это необходимо
+            #     if isinstance(answers_option, str):
+            #         data = json.loads(answers_option)
+            #     else:
+            #         data = answers_option
 
-                print(f"Loaded data: {data}")
-                print(f"Type of data: {type(data)}")
+            #     print(f"Loaded data: {data}")
+            #     print(f"Type of data: {type(data)}")
 
-                # Исключаем варианты ответа в зависимости от количества резиденций
-                if number_of_residence <= 2:
-                        data.pop("1")
-                        print('Removed "1" from data')
-                if 2 < number_of_residence <= 6:
-                    if "1/2" in data:
-                        data.pop("1/2")
-                        print('Removed "1/2" from data')
-                if number_of_residence > 4:
-                    if "1" in data:
-                        data.pop("1")
-                        print('Removed "1" from data')
-                    if "1/2" in data:
-                        data.pop("1/2")
-                        print('Removed "1/2" from data')
+            #     # Исключаем варианты ответа в зависимости от количества резиденций
+            #     if number_of_residence <= 2:
+            #             data.pop("1")
+            #             print('Removed "1" from data')
+            #     if 2 < number_of_residence <= 6:
+            #         if "1/2" in data:
+            #             data.pop("1/2")
+            #             print('Removed "1/2" from data')
+            #     if number_of_residence > 4:
+            #         if "1" in data:
+            #             data.pop("1")
+            #             print('Removed "1" from data')
+            #         if "1/2" in data:
+            #             data.pop("1/2")
+            #             print('Removed "1/2" from data')
 
-                # Преобразуем словарь обратно в JSON-строку, если это необходимо
-                if isinstance(answers_option, str):
-                    update_json_data = json.dumps(data)
-                else:
-                    update_json_data = data
+            #     # Преобразуем словарь обратно в JSON-строку, если это необходимо
+            #     if isinstance(answers_option, str):
+            #         update_json_data = json.dumps(data)
+            #     else:
+            #         update_json_data = data
 
-                print(f"Updated data: {update_json_data}")
-                print(f"Type of updated data: {type(update_json_data)}")
+            #     print(f"Updated data: {update_json_data}")
+            #     print(f"Type of updated data: {type(update_json_data)}")
 
-                return update_json_data
-            except Exception as e:
-                print(f"Error: {e}")
-                return answers_option
+            #     return update_json_data
+            # except Exception as e:
+            #     print(f"Error: {e}")
+            #     return answers_option
+            pass
 
+
+        async def handle_question_1143(self, message):
+            #TODO Эту функцию нужно будет доработать создав ещё одну таблицу в базе данных для готовой комлектации выбранной пользователем
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            if not message.text == "ДА":
+                self.parent.user_state.context_data.update({"retzirkuliatzia_goreacei_vodi": "NEPTUN Кран 12B Profi"})
+            # Сохранение обновленного состояния в базу данных
+            await self.parent.user_state.save()
+            print("Context data updated:", self.parent.user_state.context_data)
+
+        async def handle_question_1429(self, message):
+            if not self.parent.user_state.context_data:
+                self.parent.user_state.context_data = {}
+            if message.text == "Проточный":
+                self.parent.user_state.context_data.update({"waterhater_branch": "Проточный"})
+            elif message.text == "Накопительбный":
+                self.parent.user_state.context_data.update({"waterhater_branch": "Накопительбный"})
+            elif message.text == "У меня газовая колонка":
+                self.parent.user_state.context_data.update({"waterhater_branch": "У меня газовая колонка"})
 
         async def handle_question_1401(self, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
@@ -542,7 +563,7 @@ class QuestionManager:
         elif message.text == "ПРОПУСТИТЬ":
             await self.special_questions.handle_skip_question(message)
         # Проверка, является ли вопрос специальным
-        if current_question.id in [1, 5, 6, 7, 8, 9, 1100, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1124, 1127, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
+        if current_question.id in [1, 5, 6, 7, 8, 9, 1100, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1124, 1127, 1143, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
                 if current_question.id in [1104, 2112, 2113, 2121, 2127]:
@@ -600,8 +621,8 @@ class QuestionManager:
             return None
         else:
             answer_options = next_question.answer_options
-            if next_question.id == 1142:
-                answer_options = await self.special_questions.handle_question_1142(answer_options)
+            # if next_question.id == 1142:
+            #     answer_options = await self.special_questions.handle_question_1142(answer_options)
             answer_kb = ReplyKeyboardMarkup(
                 resize_keyboard=True,
                 one_time_keyboard=True,
@@ -612,8 +633,15 @@ class QuestionManager:
             return answer_kb
 
     async def handle_text_answer(self, current_question, message):
+        unconfig_nodes = self.user_state.context_data.get('unconfigured_node_count', None)
         next_question_id = current_question.next_question_id
         next_question = await self.update_user_state_with_next_question(next_question_id)
+        if next_question_id == 9900 and unconfig_nodes > 0:
+                    await message.answer("Приступим к конфигурации следующего узла ввода")
+                    next_question = await self.update_user_state_with_next_question(1104)
+                    unconfig_nodes -= 1
+                    self.user_state.context_data["unconfigured_node_count"] = unconfig_nodes
+                    await self.user_state.save()
         keyboard = await self.answer_keyboard_preparation(next_question)
         if next_question.image_url:
                 await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
@@ -637,7 +665,8 @@ class QuestionManager:
         
 
     async def handle_combo_answer(self, question, message: types.Message):
-        
+        unconfig_nodes = self.user_state.context_data.get('unconfigured_node_count', None)
+
         if message.text is not None:
             if message.text in question.answer_options:
                 next_question_id = question.answer_options[message.text]
@@ -647,6 +676,12 @@ class QuestionManager:
                 if next_question_id == 1132:
                     return await self.special_questions.handle_question_1132(question, message)
                 next_question = await self.update_user_state_with_next_question(next_question_id)
+                if next_question_id == 9900 and unconfig_nodes > 0:
+                    await message.answer("Приступим к конфигурации следующего узла ввода")
+                    next_question = await self.update_user_state_with_next_question(1104)
+                    unconfig_nodes -= 1
+                    self.user_state.context_data["unconfigured_node_count"] = unconfig_nodes
+                    await self.user_state.save()
                 keyboard = await self.answer_keyboard_preparation(next_question)
             if next_question.image_url:
                 await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
@@ -666,6 +701,12 @@ class QuestionManager:
                 if next_question_id == 1132:
                     return await self.special_questions.handle_question_1132(question, message)
                 next_question = await self.update_user_state_with_next_question(next_question_id)
+                if next_question_id == 9900 and unconfig_nodes > 0:
+                    await message.answer("Приступим к конфигурации следующего узла ввода")
+                    next_question = await self.update_user_state_with_next_question(1104)
+                    unconfig_nodes -= 1
+                    self.user_state.context_data["unconfigured_node_count"] = unconfig_nodes
+                    await self.user_state.save()
                 keyboard = await self.answer_keyboard_preparation(next_question)
                 if keyboard is not None:
                     return await message.answer(next_question.question, reply_markup=keyboard)
