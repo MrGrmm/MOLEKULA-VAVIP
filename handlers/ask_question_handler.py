@@ -106,7 +106,7 @@ class QuestionManager:
             return keyboard
                     
 
-        async def handle_question_1100(self, message):
+        async def handle_question_1011(self, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
@@ -121,7 +121,7 @@ class QuestionManager:
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
 
-        async def handle_question_1101(self, message):
+        async def handle_question_1100(self, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
@@ -133,7 +133,7 @@ class QuestionManager:
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
 
-        async def handle_question_1102(self, message):
+        async def handle_question_1101(self, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
@@ -145,7 +145,7 @@ class QuestionManager:
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
 
-        async def handle_question_1103(self, message):
+        async def handle_question_1102(self, message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
@@ -157,7 +157,7 @@ class QuestionManager:
             await self.parent.user_state.save()
             print("Context data updated:", self.parent.user_state.context_data)
 
-        async def handle_question_1104(self, question, message):
+        async def handle_question_1103(self,  message):
             # Сначала проверяем, что в context_data уже есть данные, если нет, создаем новый словарь
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
@@ -171,50 +171,29 @@ class QuestionManager:
 
             # Сохранение обновленного состояния в базу данных
             print("Context data updated:", self.parent.user_state.context_data)
-            node_count =  self.parent.user_state.context_data.get("unconfigured_node_count", None)
-            if node_count < 1:
-                next_question_id = 1109
-            elif node_count >= 1:
-                bathroom_count = self.parent.user_state.context_data.get("unconfigured_bathroom_count", None)
-                question_text = f"Вы указали что в квартире {bathroom_count} сан.узлов.\
-                                  Какие сан узлы будут подключатся к первой группе?"
-                next_question_id = question.answer_options[message.text]
-                node_count -= 1
-                self.parent.user_state.context_data.update({"unconfigured_node_count": int(node_count)})
-            else:
-                return print("ERROR in handle_question_1105")
             
-            await self.parent.user_state.save()
-            next_question = await self.parent.update_user_state_with_next_question(next_question_id)
-            keyboard = await self.parent.answer_keyboard_preparation(next_question)
-            if next_question.image_url != "":
-                    await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
-            if keyboard is not None:
-                return await message.answer(question_text, reply_markup=keyboard)
-            else:
-                return await message.answer(question_text)
 
 
-        async def handle_question_1105(self, message):
+        async def handle_question_1104(self, message):
             bathroom_count = self.parent.user_state.context_data.get("unconfigured_bathroom_count", None) 
             # bathroom_count -= int(message.text)
             self.parent.user_state.context_data.update({"unconfigured_bathroom_count": int(bathroom_count)})
             await self.parent.user_state.save()
 
         
-        async def handle_question_1106(self, message):
-            kitchen_count = self.parent.user_state.context_data.get("unconfigured_kitchen_count", None) 
-            # kitchen_count -= int(message.text)
-            self.parent.user_state.context_data.update({"unconfigured_kitchen_count": int(kitchen_count)})
-            await self.parent.user_state.save()  
-
-
+        # async def handle_question_1106(self, message):
+        #     kitchen_count = self.parent.user_state.context_data.get("unconfigured_kitchen_count", None) 
+        #     # kitchen_count -= int(message.text)
+        #     self.parent.user_state.context_data.update({"unconfigured_kitchen_count": int(kitchen_count)})
+        #     await self.parent.user_state.save()  
         async def handle_question_1107(self, message):
-            laundries_count = self.parent.user_state.context_data.get("unconfigured_laundries_count", None) 
-            # laundries_count -= int(message.text)
-            if laundries_count:
-                self.parent.user_state.context_data.update({"unconfigured_laundries_count": int(laundries_count)})
-                await self.parent.user_state.save()   
+            kitchen_count = self.parent.user_state.context_data.get("unconfigured_wetroom_count", None) 
+            # kitchen_count -= int(message.text)
+            if kitchen_count == "Ничего нету":
+                pass
+            #TODO
+            
+
 
 
         async def handle_question_1108(self, message):
@@ -222,24 +201,25 @@ class QuestionManager:
             
 
         async def handle_question_1109(self, message):
-            bathroom_count =  self.parent.user_state.context_data.get("unconfigured_bathroom_count", None)
-            if bathroom_count is not None and bathroom_count > 0:
-                bathroom_count -= 1
-                self.parent.user_state.context_data.update({"unconfigured_bathroom_count": int(bathroom_count)})
-                next_question_id = 1109
-
-
-            await self.parent.user_state.save()
-            next_question = await self.parent.update_user_state_with_next_question(next_question_id)
-            keyboard = await self.parent.answer_keyboard_preparation(next_question)
-            if next_question.image_url != "":
-                    await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
-            if keyboard is not None:
-                return await message.answer(next_question.question, reply_markup=keyboard)
-            else:
-                return await message.answer(next_question.question)
-
+            # bathroom_count =  self.parent.user_state.context_data.get("unconfigured_bathroom_count", None)
+            # if bathroom_count is not None and bathroom_count > 0:
+            #     bathroom_count -= 1
+            #     self.parent.user_state.context_data.update({"unconfigured_bathroom_count": int(bathroom_count)})
+            #     next_question_id = 1109
+            # else:
+            #     next_question_id = 1110
+            # await self.parent.user_state.save()
+            # next_question = await self.parent.update_user_state_with_next_question(next_question_id)
+            # keyboard = await self.parent.answer_keyboard_preparation(next_question)
+            # if next_question.image_url != "":
+            #         await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
+            # if keyboard is not None:
+            #     return await message.answer(next_question.question, reply_markup=keyboard)
+            # else:
+            #     return await message.answer(next_question.question)
+            pass
         
+
         async def handle_question_1124(self, message):
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
@@ -563,10 +543,10 @@ class QuestionManager:
         elif message.text == "ПРОПУСТИТЬ":
             await self.special_questions.handle_skip_question(message)
         # Проверка, является ли вопрос специальным
-        if current_question.id in [1, 5, 6, 7, 8, 9, 1100, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1124, 1127, 1143, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
+        if current_question.id in [1, 5, 6, 7, 8, 9, 1011, 1100, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1124, 1127, 1143, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127] :  # ID специальных вопросов
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
-                if current_question.id in [1104, 2112, 2113, 2121, 2127]:
+                if current_question.id in [ 2112, 2113, 2121, 2127]:
                     return await method(current_question, message)
                 else:
                     await method(message)
@@ -631,17 +611,25 @@ class QuestionManager:
                 ]
             )
             return answer_kb
+        
 
     async def handle_text_answer(self, current_question, message):
         unconfig_nodes = self.user_state.context_data.get('unconfigured_node_count', None)
+        unconfig_weetrooms = self.user_state.context_data.get('unconfigured_wetroom_count', None)
         next_question_id = current_question.next_question_id
         next_question = await self.update_user_state_with_next_question(next_question_id)
         if next_question_id == 9900 and unconfig_nodes > 0:
-                    await message.answer("Приступим к конфигурации следующего узла ввода")
-                    next_question = await self.update_user_state_with_next_question(1104)
-                    unconfig_nodes -= 1
-                    self.user_state.context_data["unconfigured_node_count"] = unconfig_nodes
-                    await self.user_state.save()
+            await message.answer("Приступим к конфигурации следующего узла ввода")
+            next_question = await self.update_user_state_with_next_question(1104)
+            unconfig_nodes -= 1
+            self.user_state.context_data["unconfigured_node_count"] = unconfig_nodes
+            await self.user_state.save()
+        elif next_question_id == 1106 and unconfig_weetrooms > 0:
+            await message.answer("Приступим к конфигурации следующего узла ввода")
+            next_question = await self.update_user_state_with_next_question(1108)
+            unconfig_weetrooms -= 1
+            self.user_state.context_data["unconfigured_node_count"] = unconfig_weetrooms
+            await self.user_state.save()
         keyboard = await self.answer_keyboard_preparation(next_question)
         if next_question.image_url:
                 await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
@@ -652,9 +640,15 @@ class QuestionManager:
 
     async def handle_choice_answer(self, question, message):
         next_question_id = question.answer_options[message.text]
+        unconfig_weetrooms = self.user_state.context_data.get('unconfigured_wetroom_count', None)
         if next_question_id == 1132:
             return await self.special_questions.handle_question_1132(question, message)
         next_question = await self.update_user_state_with_next_question(next_question_id)
+        if next_question_id == 1106 and unconfig_weetrooms > 0:
+            next_question = await self.update_user_state_with_next_question(1108)
+            unconfig_weetrooms -= 1
+            self.user_state.context_data["unconfigured_node_count"] = unconfig_weetrooms
+            await self.user_state.save()
         keyboard = await self.answer_keyboard_preparation(next_question)
         if next_question.image_url != "":
                 await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
@@ -666,7 +660,7 @@ class QuestionManager:
 
     async def handle_combo_answer(self, question, message: types.Message):
         unconfig_nodes = self.user_state.context_data.get('unconfigured_node_count', None)
-
+        unconfig_weetrooms = self.user_state.context_data.get('unconfigured_wetroom_count', None)
         if message.text is not None:
             if message.text in question.answer_options:
                 next_question_id = question.answer_options[message.text]
@@ -681,6 +675,12 @@ class QuestionManager:
                     next_question = await self.update_user_state_with_next_question(1104)
                     unconfig_nodes -= 1
                     self.user_state.context_data["unconfigured_node_count"] = unconfig_nodes
+                    await self.user_state.save()
+                elif next_question_id == 1106 and unconfig_weetrooms > 0:
+                    await message.answer("Приступим к конфигурации следующего узла ввода")
+                    next_question = await self.update_user_state_with_next_question(1108)
+                    unconfig_weetrooms -= 1
+                    self.user_state.context_data["unconfigured_node_count"] = unconfig_weetrooms
                     await self.user_state.save()
                 keyboard = await self.answer_keyboard_preparation(next_question)
             if next_question.image_url:
@@ -706,6 +706,12 @@ class QuestionManager:
                     next_question = await self.update_user_state_with_next_question(1104)
                     unconfig_nodes -= 1
                     self.user_state.context_data["unconfigured_node_count"] = unconfig_nodes
+                    await self.user_state.save()
+                elif next_question_id == 1106 and unconfig_weetrooms > 0:
+                    await message.answer("Приступим к конфигурации следующего узла ввода")
+                    next_question = await self.update_user_state_with_next_question(1108)
+                    unconfig_weetrooms -= 1
+                    self.user_state.context_data["unconfigured_node_count"] = unconfig_weetrooms
                     await self.user_state.save()
                 keyboard = await self.answer_keyboard_preparation(next_question)
                 if keyboard is not None:
