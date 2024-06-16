@@ -136,6 +136,7 @@ local_settings.py
 *.sublime-workspace
 
 # Configurations
+forTEST.py
 config.py
 *.ini
 *.json
