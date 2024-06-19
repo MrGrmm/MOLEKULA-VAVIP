@@ -150,14 +150,16 @@ class QuestionManager:
                 self.parent.user_state.context_data.update({"unconfigured_wetroom_count": 0})
             logger.info("Context data updated: %s", self.parent.user_state.context_data)
 
-        async def replace_placeholder_bathrooms(self, question_text):
+        async def replace_placeholder_bathrooms(self, question):
             """
             Заменяет все вхождения '*' в тексте вопроса на значение total_bathrooms из context_data.
             """
-            total_bathrooms = self.user_state.context_data.get('total_bathrooms', 0)
+            unconfigured_bathrooms_count = self.parent.user_state.context_data.get('unconfigured_bathrooms_count', 0)
+            question_text = question.question
             if '*' in question_text:
-                question_text = question_text.replace('*', str(total_bathrooms))
-            return question_text
+                question_text = question_text.replace('*', str(unconfigured_bathrooms_count))
+                question.question = question_text
+            return question
 
         async def handle_question_1104(self, question, message):
             # Получаем данные unconfigured_bathroom_count из context_data
@@ -356,6 +358,31 @@ class QuestionManager:
         self.user_state = user_state
         self.special_questions = self.SpecialQuestions(self)
 
+    async def skip_to_next_question(self, message):
+        """
+        Пропускает текущий вопрос и задает следующий вопрос пользователю.
+        """
+        current_question = await self.fetch_current_question()
+        if not current_question:
+            return await message.answer("Вопрос не найден.")
+        
+        next_question_id = current_question.answer_options.get('1')
+        if not next_question_id:
+            return await message.answer("Следующий вопрос не найден.")
+        
+        next_question = await self.update_user_state_with_next_question(next_question_id)
+        if not next_question:
+            return await message.answer("Следующий вопрос не найден.")
+
+        keyboard = await self.answer_keyboard_preparation(next_question)
+        if next_question.image_url:
+            await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
+        
+        if keyboard:
+            await message.answer(next_question.question, reply_markup=keyboard)
+        else:
+            await message.answer(next_question.question)
+
     async def process_answer(self, brief, message):
         await self.save_user_answer(brief, message)
         current_question = await self.fetch_current_question()
@@ -458,6 +485,13 @@ class QuestionManager:
             self.user_state.context_data["unconfigured_wetroom_count"] = unconfig_weetrooms
             await self.user_state.save()
         keyboard = await self.answer_keyboard_preparation(next_question)
+        if next_question_id == 1104:
+            total_bathrooms = self.user_state.context_data.get('total_bathrooms', 0)
+            if total_bathrooms > 0:
+                next_question = await self.special_questions.replace_placeholder_bathrooms(next_question)
+            else:
+                await message.answer(text="Все ванные комнаты выбраны")
+                return await self.skip_to_next_question(message)
         if next_question.image_url:
             await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         if keyboard:
@@ -484,7 +518,12 @@ class QuestionManager:
             await self.user_state.save()
         keyboard = await self.answer_keyboard_preparation(next_question)
         if next_question_id == 1104:
-            question = await self.special_questions.replace_placeholder_bathrooms(question.text)
+            unconfigured_bathrooms_count = self.user_state.context_data.get('unconfigured_bathrooms_count', 0)
+            if unconfigured_bathrooms_count > 0:
+                next_question = await self.special_questions.replace_placeholder_bathrooms(next_question)
+            else:
+                await message.answer(text="Все ванные комнаты выбраны")
+                return await self.skip_to_next_question(message)
         if next_question.image_url:
             await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         if keyboard:
