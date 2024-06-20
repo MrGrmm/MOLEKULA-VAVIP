@@ -134,8 +134,8 @@ class QuestionManager:
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
             if not message.text == "Нужна консультация":
-                self.parent.user_state.context_data.update({"total_laundries": message.text})
-                self.parent.user_state.context_data.update({"unconfigured_laundries_count": message.text})
+                self.parent.user_state.context_data.update({"total_laundries": int(message.text)})
+                self.parent.user_state.context_data.update({"unconfigured_laundries_count": int(message.text)})
             await self.parent.user_state.save()
             logger.info("Context data updated: %s", self.parent.user_state.context_data)
 
@@ -152,12 +152,12 @@ class QuestionManager:
 
         async def replace_placeholder_bathrooms(self, question):
             """
-            Заменяет все вхождения '*' в тексте вопроса на значение total_bathrooms из context_data.
+            Заменяет все вхождения '*' в тексте вопроса на значение unconfigured_bathroom_count из context_data.
             """
-            unconfigured_bathrooms_count = self.parent.user_state.context_data.get('unconfigured_bathrooms_count', 0)
+            unconfigured_bathroom_count = self.parent.user_state.context_data.get('unconfigured_bathroom_count', 0)
             question_text = question.question
             if '*' in question_text:
-                question_text = question_text.replace('*', str(unconfigured_bathrooms_count))
+                question_text = question_text.replace('*', str(unconfigured_bathroom_count))
                 question.question = question_text
             return question
 
@@ -181,22 +181,86 @@ class QuestionManager:
                     await message.answer("Пожалуйста, введите корректное количество ванных комнат.")
             else:
                 # Оповещаем пользователя, что все ванные комнаты уже подключены к другому узлу
-                await message.answer("Все ванные комнаты уже подключены к другому узлу.")
+                await message.answer("Все ванные комнаты уже подключены.")
                 # Приступаем к следующему вопросу
                 await self.parent.handle_choice_answer(question, message)
 
-        async def handle_question_1105(self, message):
-            kitchen_count = self.parent.user_state.context_data.get("unconfigured_kitchen_count", 0) 
-            self.parent.user_state.context_data.update({"unconfigured_kitchen_count": int(kitchen_count)})
-            await self.parent.user_state.save()  
+        async def replace_placeholder_kitchen(self, question):
+            """
+            Заменяет все вхождения '*' в тексте вопроса на значение total_bathrooms из context_data.
+            """
+            unconfigured_kitchen_count = self.parent.user_state.context_data.get('unconfigured_kitchen_count', 0)
+            question_text = question.question
+            if '*' in question_text:
+                question_text = question_text.replace('*', str(unconfigured_kitchen_count))
+                question.question = question_text
+            return question
 
-        async def handle_question_1106(self, message):
-            pass
+        async def handle_question_1105(self, question, message):
+            # Получаем данные unconfigured_bathroom_count из context_data
+            unconfigured_kitchen_count = self.parent.user_state.context_data.get("unconfigured_kitchen_count", 0)
+
+            if unconfigured_kitchen_count > 0:
+                # Получаем текстовые данные из сообщения пользователя
+                if message.text and message.text.isdigit():
+                    kitchen_to_subtract = int(message.text)
+                    
+                    # Минусуем ответ пользователя из unconfigured_bathrooms_count и сохраняем изменения
+                    unconfigured_kitchen_count -= kitchen_to_subtract
+                    self.parent.user_state.context_data["unconfigured_bathroom_count"] = unconfigured_kitchen_count
+                    await self.parent.user_state.save()
+                    
+                    await message.answer(f"Осталось неконфигурированных кухонь: {unconfigured_kitchen_count}")
+                    await self.parent.handle_choice_answer(question, message)
+                else:
+                    await message.answer("Пожалуйста, введите корректное количество кухонь.")
+            else:
+                # Оповещаем пользователя, что все ванные комнаты уже подключены к другому узлу
+                await message.answer("Все ванные комнаты уже подключены.")
+                # Приступаем к следующему вопросу
+                await self.parent.handle_choice_answer(question, message)
+
+        async def replace_placeholder_laundries(self, question):
+            """
+            Заменяет все вхождения '*' в тексте вопроса на значение total_bathrooms из context_data.
+            """
+            unconfigured_laundries_count = self.parent.user_state.context_data.get('unconfigured_laundries_count', 0)
+            question_text = question.question
+            if '*' in question_text:
+                question_text = question_text.replace('*', str(unconfigured_laundries_count))
+                question.question = question_text
+            return question
+
+        async def handle_question_1106(self, question, message):
+            # Получаем данные unconfigured_bathroom_count из context_data
+            unconfigured_laundries_count = self.parent.user_state.context_data.get("unconfigured_laundries_count", 0)
+
+            if unconfigured_laundries_count > 0:
+                # Получаем текстовые данные из сообщения пользователя
+                if message.text and message.text.isdigit():
+                    laundries_to_subtract = int(message.text)
+                    
+                    # Минусуем ответ пользователя из unconfigured_bathrooms_count и сохраняем изменения
+                    unconfigured_laundries_count -= laundries_to_subtract
+                    self.parent.user_state.context_data["unconfigured_laundries_count"] = unconfigured_laundries_count
+                    await self.parent.user_state.save()
+                    
+                    await message.answer(f"Осталось неконфигурированных прачечных: {unconfigured_laundries_count}")
+                    await self.parent.handle_choice_answer(question, message)
+                else:
+                    await message.answer("Пожалуйста, введите корректное количество прачечных.")
+            else:
+                # Оповещаем пользователя, что все ванные комнаты уже подключены к другому узлу
+                await message.answer("Все ванные комнаты уже подключены.")
+                # Приступаем к следующему вопросу
+                await self.parent.handle_choice_answer(question, message)
 
         async def handle_question_1107(self, message):
             kitchen_count = self.parent.user_state.context_data.get("unconfigured_wetroom_count", 0) 
-            if kitchen_count == "Ничего нету":
+            if kitchen_count > 0:
                 pass
+            else:
+                await self.parent.skip_to_next_question(message)
             # TODO
 
         async def handle_question_1109(self, message):
@@ -368,7 +432,10 @@ class QuestionManager:
         
         next_question_id = current_question.answer_options.get('1')
         if not next_question_id:
-            return await message.answer("Следующий вопрос не найден.")
+            try:
+                next_question_id == current_question.answer_options.get('ДА')
+            except:
+                return await message.answer("Следующий вопрос не найден.")
         
         next_question = await self.update_user_state_with_next_question(next_question_id)
         if not next_question:
@@ -395,7 +462,7 @@ class QuestionManager:
         if current_question.id in [1, 5, 6, 7, 8, 9, 1011, 1100, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1124, 1127, 1143, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127]:
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
-                if current_question.id in [1104, 2112, 2113, 2121, 2127]:
+                if current_question.id in [1104, 1105, 1106, 2112, 2113, 2121, 2127]:
                     return await method(current_question, message)
                 else:
                     await method(message)
@@ -492,6 +559,26 @@ class QuestionManager:
             else:
                 await message.answer(text="Все ванные комнаты выбраны")
                 return await self.skip_to_next_question(message)
+        elif next_question_id == 1105:
+            unconfigured_kitchen_count = self.user_state.context_data.get('unconfigured_kitchen_count', 0)
+            if unconfigured_kitchen_count > 0:
+                next_question = await self.special_questions.replace_placeholder_kitchen(next_question)
+            else:
+                await message.answer(text="Все кухни выбраны")
+                return await self.skip_to_next_question(message)
+        elif next_question_id == 1106:
+            unconfigured_laundries_count = self.user_state.context_data.get('unconfigured_laundries_count', 0)
+            if unconfigured_laundries_count > 0:
+                next_question = await self.special_questions.replace_placeholder_laundries(next_question)
+            else:
+                await message.answer(text="Все прачечные выбраны")
+                return await self.skip_to_next_question(message)
+        elif next_question_id == 1107:
+            unconfigured_wetroom_count = self.user_state.context_data.get('unconfigured_wetroom_count', 0)
+            if unconfigured_wetroom_count > 0:
+                pass
+            else:
+                return await self.skip_to_next_question(message)
         if next_question.image_url:
             await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         if keyboard:
@@ -512,14 +599,10 @@ class QuestionManager:
             unconfig_nodes -= 1
             self.user_state.context_data["unconfigured_node_count"] = unconfig_nodes
             await self.user_state.save()
-        elif next_question_id == 1106 and unconfig_weetrooms < 1:
-            next_question = await self.update_user_state_with_next_question(1108)
-            self.user_state.context_data["unconfigured_wetroom_count"] = unconfig_weetrooms
-            await self.user_state.save()
         keyboard = await self.answer_keyboard_preparation(next_question)
         if next_question_id == 1104:
-            unconfigured_bathrooms_count = self.user_state.context_data.get('unconfigured_bathrooms_count', 0)
-            if unconfigured_bathrooms_count > 0:
+            unconfigured_bathroom_count = self.user_state.context_data.get('unconfigured_bathroom_count', 0)
+            if unconfigured_bathroom_count > 0:
                 next_question = await self.special_questions.replace_placeholder_bathrooms(next_question)
             else:
                 await message.answer(text="Все ванные комнаты выбраны")
