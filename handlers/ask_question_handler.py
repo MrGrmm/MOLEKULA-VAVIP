@@ -12,6 +12,20 @@ from models import User, Brief, Question, UserState, Answer
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import asyncio
+import logging
+from aiogram import types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile
+import sqlite3
+import json
+import re
+import datetime
+from models import User, Brief, Question, UserState, Answer
+
+# Настройка логгирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class QuestionManager:
     class SpecialQuestions:
         def __init__(self, parent):
@@ -207,7 +221,7 @@ class QuestionManager:
                     
                     # Минусуем ответ пользователя из unconfigured_bathrooms_count и сохраняем изменения
                     unconfigured_kitchen_count -= kitchen_to_subtract
-                    self.parent.user_state.context_data["unconfigured_bathroom_count"] = unconfigured_kitchen_count
+                    self.parent.user_state.context_data["unconfigured_kitchen_count"] = unconfigured_kitchen_count
                     await self.parent.user_state.save()
                     
                     await message.answer(f"Осталось неконфигурированных кухонь: {unconfigured_kitchen_count}")
@@ -432,9 +446,8 @@ class QuestionManager:
         
         next_question_id = current_question.answer_options.get('1')
         if not next_question_id:
-            try:
-                next_question_id == current_question.answer_options.get('ДА')
-            except:
+            next_question_id = current_question.answer_options.get('ДА')
+            if not next_question_id:
                 return await message.answer("Следующий вопрос не найден.")
         
         next_question = await self.update_user_state_with_next_question(next_question_id)
@@ -442,6 +455,12 @@ class QuestionManager:
             return await message.answer("Следующий вопрос не найден.")
 
         keyboard = await self.answer_keyboard_preparation(next_question)
+        if next_question_id == 1104:
+            next_question = await self.special_questions.replace_placeholder_bathrooms(next_question)
+        if next_question_id == 1105:
+            next_question = await self.special_questions.replace_placeholder_kitchen(next_question)         
+        if next_question_id == 1106:
+            next_question = await self.special_questions.replace_placeholder_laundries(next_question)
         if next_question.image_url:
             await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         
@@ -526,7 +545,7 @@ class QuestionManager:
             unconfig_nodes -= 1
             self.user_state.context_data["unconfigured_node_count"] = unconfig_nodes
             await self.user_state.save()
-        elif next_question_id == 1106 and unconfig_weetrooms > 0:
+        elif next_question_id == 1166 and unconfig_weetrooms > 0:
             await message.answer("Приступим к конфигурации следующего узла ввода")
             next_question = await self.update_user_state_with_next_question(1108)
             unconfig_weetrooms -= 1
@@ -553,8 +572,8 @@ class QuestionManager:
             await self.user_state.save()
         keyboard = await self.answer_keyboard_preparation(next_question)
         if next_question_id == 1104:
-            total_bathrooms = self.user_state.context_data.get('total_bathrooms', 0)
-            if total_bathrooms > 0:
+            unconfigured_bathroom_count = self.user_state.context_data.get('unconfigured_wetroom_count', 0)
+            if unconfigured_bathroom_count > 0:
                 next_question = await self.special_questions.replace_placeholder_bathrooms(next_question)
             else:
                 await message.answer(text="Все ванные комнаты выбраны")
@@ -666,3 +685,4 @@ async def hi_message(message: types.Message):
     except Exception as e:
         logger.error(f"Error in hi_message: {e}")
         await message.answer("Произошла ошибка, попробуйте позже.")
+
