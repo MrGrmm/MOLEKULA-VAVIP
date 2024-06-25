@@ -277,8 +277,82 @@ class QuestionManager:
                 await self.parent.skip_to_next_question(message)
             # TODO
 
-        async def handle_question_1109(self, message):
-            pass
+        async def replace_placeholder_wc(self, question):
+            """
+            Заменяет все вхождения '*' в тексте вопроса на значение total_bathrooms из context_data.
+            """
+            current_bathr_iteration = self.parent.user_state.context_data.get('current_bathr_iteration', 1)
+            question_text = question.question
+            if '*' in question_text:
+                question_text = question_text.replace('*', str(current_bathr_iteration))
+                question.question = question_text
+            return question
+
+        async def handle_question_1108(self,question, message):
+            # Получаем общее количество ванных комнат
+            total_bathrooms = self.parent.user_state.context_data.get("total_bathrooms", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_bathr_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_bathr_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_bathr_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_bathr_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_bathrooms:
+                self.parent.user_state.context_data.pop("current_bathr_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1108
+            question = await Question.get_or_none(id=1108)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_wc(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
+
+        async def handle_question_1109(self, question, message):
+            # Получаем общее количество ванных комнат
+            total_bathrooms = self.parent.user_state.context_data.get("total_bathrooms", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_bathr_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_bathr_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_bathr_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_bathr_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_bathrooms:
+                self.parent.user_state.context_data.pop("current_bathr_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1108
+            question = await Question.get_or_none(id=1108)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_wc(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
 
         async def handle_question_1124(self, message):
             if not self.parent.user_state.context_data:
@@ -448,7 +522,9 @@ class QuestionManager:
         if not next_question_id:
             next_question_id = current_question.answer_options.get('ДА')
             if not next_question_id:
-                return await message.answer("Следующий вопрос не найден.")
+                next_question_id = current_question.answer_options.get('НЕТ')
+                if not next_question_id:
+                    return await message.answer("Следующий вопрос не найден.")
         
         next_question = await self.update_user_state_with_next_question(next_question_id)
         if not next_question:
@@ -461,6 +537,14 @@ class QuestionManager:
             next_question = await self.special_questions.replace_placeholder_kitchen(next_question)         
         if next_question_id == 1106:
             next_question = await self.special_questions.replace_placeholder_laundries(next_question)
+        if next_question_id in [1108, 1109]:
+            if "current_bathr_iteration" not in self.user_state.context_data:
+                self.user_state.context_data["current_bathr_iteration"] = 1
+            else:
+                self.user_state.context_data["current_bathr_iteration"] += 1
+            next_question == await self.special_questions.replace_placeholder_wc(next_question)
+            await self.user_state.save()
+
         if next_question.image_url:
             await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         
@@ -481,7 +565,7 @@ class QuestionManager:
         if current_question.id in [1, 5, 6, 7, 8, 9, 1011, 1100, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1124, 1127, 1143, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127]:
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
-                if current_question.id in [1104, 1105, 1106, 2112, 2113, 2121, 2127]:
+                if current_question.id in [1104, 1105, 1106, 1108, 1109, 2112, 2113, 2121, 2127]:
                     return await method(current_question, message)
                 else:
                     await method(message)
@@ -598,6 +682,10 @@ class QuestionManager:
                 pass
             else:
                 return await self.skip_to_next_question(message)
+        elif next_question_id == 1108:
+            await self.special_questions.handle_question_1108(next_question, message)
+        elif next_question_id == 1109:
+            await self.special_questions.handle_question_1109(next_question, message)
         if next_question.image_url:
             await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         if keyboard:
