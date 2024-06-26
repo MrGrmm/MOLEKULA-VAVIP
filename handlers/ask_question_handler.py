@@ -519,6 +519,217 @@ class QuestionManager:
                 
             await self.parent.user_state.save()
 
+        async def replace_placeholder_ktch(self, question):
+            """
+            Заменяет все вхождения '*' в тексте вопроса на значение total_bathrooms из context_data.
+            """
+            current_ktch_iteration = self.parent.user_state.context_data.get('current_ktch_iteration', 1)
+            question_text = question.question
+            if '*' in question_text:
+                question_text = question_text.replace('*', str(current_ktch_iteration))
+                question.question = question_text
+            return question
+
+        async def handle_question_1115(self, question, message):
+            # Получаем общее количество ванных комнат
+            total_bathrooms = self.parent.user_state.context_data.get("total_kitchens", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_ktch_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_ktch_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_ktch_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_ktch_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_bathrooms:
+                self.parent.user_state.context_data.pop("current_ktch_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1109
+            question = await Question.get_or_none(id=1115)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_ktch(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
+
+
+        async def handle_question_1116(self, question, message):
+            # Получаем общее количество ванных комнат
+            total_bathrooms = self.parent.user_state.context_data.get("total_kitchens", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_ktch_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_ktch_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_ktch_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_ktch_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_bathrooms:
+                self.parent.user_state.context_data.pop("current_ktch_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1109
+            question = await Question.get_or_none(id=1116)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_ktch(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
+
+
+        async def handle_question_1117(self, question, message):
+            # Получаем общее количество ванных комнат
+            total_bathrooms = self.parent.user_state.context_data.get("total_kitchens", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_ktch_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_ktch_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_ktch_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_ktch_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_bathrooms:
+                self.parent.user_state.context_data.pop("current_ktch_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1109
+            question = await Question.get_or_none(id=1117)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_ktch(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
+
+        async def handle_question_1118(self, question, message):
+           # Получаем общее количество ванных комнат
+            total_bathrooms = self.parent.user_state.context_data.get("total_kitchens", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_ktch_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_ktch_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_ktch_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_ktch_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_bathrooms:
+                self.parent.user_state.context_data.pop("current_ktch_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1109
+            question = await Question.get_or_none(id=1118)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_ktch(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
+
+        async def handle_question_1119(self, question, message):
+           # Получаем общее количество ванных комнат
+            total_bathrooms = self.parent.user_state.context_data.get("total_kitchens", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_ktch_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_ktch_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_ktch_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_ktch_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_bathrooms:
+                self.parent.user_state.context_data.pop("current_ktch_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1109
+            question = await Question.get_or_none(id=1119)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_ktch(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
+            
+        async def handle_question_1120(self, question, message):
+            # Получаем общее количество ванных комнат
+            total_bathrooms = self.parent.user_state.context_data.get("total_kitchens", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_ktch_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_ktch_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_ktch_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_ktch_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_bathrooms:
+                self.parent.user_state.context_data.pop("current_ktch_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1109
+            question = await Question.get_or_none(id=1120)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_ktch(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
+
         async def handle_question_1124(self, message):
             if not self.parent.user_state.context_data:
                 self.parent.user_state.context_data = {}
@@ -530,6 +741,83 @@ class QuestionManager:
                 await self.parent.user_state.save()
             else:
                 await message.answer("Консультация нужна. Что вас интересует?")
+
+        async def replace_placeholder_lnd(self, question):
+            """
+            Заменяет все вхождения '*' в тексте вопроса на значение total_bathrooms из context_data.
+            """
+            current_lnd_iteration = self.parent.user_state.context_data.get('current_lnd_iteration', 1)
+            question_text = question.question
+            if '*' in question_text:
+                question_text = question_text.replace('*', str(current_lnd_iteration))
+                question.question = question_text
+            return question
+
+        async def handle_question_1121(self, question, message):
+            # Получаем общее количество ванных комнат
+            total_laundries = self.parent.user_state.context_data.get("total_laundries", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_lnd_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_lnd_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_lnd_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_lnd_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_laundries:
+                self.parent.user_state.context_data.pop("current_lnd_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1109
+            question = await Question.get_or_none(id=1121)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_laundries(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
+
+        async def handle_question_1122(self, question, message):
+            # Получаем общее количество ванных комнат
+            total_laundries = self.parent.user_state.context_data.get("total_laundries", 0)
+            
+            # Проверяем, существует ли итерация в context_data, если нет - создаем
+            if "current_lnd_iteration" not in self.parent.user_state.context_data:
+                self.parent.user_state.context_data["current_lnd_iteration"] = 1
+            else:
+                self.parent.user_state.context_data["current_lnd_iteration"] += 1
+            
+            current_iteration = self.parent.user_state.context_data["current_lnd_iteration"]
+
+            # Если итерация превышает общее количество ванных комнат, переходим к следующему вопросу
+            if current_iteration > total_laundries:
+                self.parent.user_state.context_data.pop("current_lnd_iteration", None)
+                await self.parent.skip_to_next_question(message)
+                return await self.parent.user_state.save()
+            
+            # Получаем вопрос 1109
+            question = await Question.get_or_none(id=1122)
+            if question:
+                # Заменяем * на текущую итерацию
+                keyboard = await self.parent.answer_keyboard_preparation(question)
+                question = await self.replace_placeholder_laundries(question)
+                if question.image_url:
+                    await message.answer_photo(photo=FSInputFile(path=f"{question.image_url}"))
+                if keyboard:
+                    await message.answer(question.question, reply_markup=keyboard)
+                else:
+                    await message.answer(question.question)
+                
+            await self.parent.user_state.save()
 
         async def handle_question_1127(self, message):
             if not self.parent.user_state.context_data:
@@ -709,7 +997,20 @@ class QuestionManager:
                 self.user_state.context_data["current_bathr_iteration"] += 1
             await self.user_state.save()
             next_question == await self.special_questions.replace_placeholder_wc(next_question)
-            
+        elif next_question_id in [1115, 1116, 1117, 1118, 1119, 1120]:
+            if "current_ktch_iteration" not in self.user_state.context_data:
+                self.user_state.context_data["current_ktch_iteration"] = 1
+            else:
+                self.user_state.context_data["current_ktch_iteration"] += 1
+            await self.user_state.save()
+            next_question == await self.special_questions.replace_placeholder_ktch(next_question)
+        elif next_question_id in [ 1121, 1122]:
+            if "current_lnd_iteration" not in self.user_state.context_data:
+                self.user_state.context_data["current_lnd_iteration"] = 1
+            else:
+                self.user_state.context_data["current_lnd_iteration"] += 1
+            await self.user_state.save()
+            next_question == await self.special_questions.replace_placeholder_ktch(next_question)
         if next_question.image_url:
             await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         
@@ -727,10 +1028,10 @@ class QuestionManager:
             return await self.special_questions.handle_question_consultation(message, current_question)
         elif message.text == "ПРОПУСТИТЬ":
             await self.special_questions.handle_skip_question(message)
-        if current_question.id in [1, 5, 6, 7, 8, 9, 1011, 1100, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1110, 1111, 1112, 1113, 1114, 1124, 1127, 1143, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127]:
+        if current_question.id in [1, 5, 6, 7, 8, 9, 1011, 1100, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1108, 1109, 1110, 1111, 1112, 1113, 1114, 1115, 1116, 1117, 1118, 1119, 1120, 1121, 1122, 1124, 1127, 1143, 1429, 2100, 2102, 2104, 2112, 2113, 2121, 2127]:
             method = getattr(self.special_questions, f'handle_question_{current_question.id}', None)
             if method:
-                if current_question.id in [1104, 1105, 1106, 1108, 1109, 1110, 1111, 1112, 1113, 1114, 2112, 2113, 2121, 2127]:
+                if current_question.id in [1104, 1105, 1106, 1108, 1109, 1110, 1111, 1112, 1113, 1114, 1115, 1116, 1117, 1118, 1119, 1120, 1121, 1122, 2112, 2113, 2121, 2127]:
                     return await method(current_question, message)
                 else:
                     await method(message)
@@ -847,20 +1148,40 @@ class QuestionManager:
                 pass
             else:
                 return await self.skip_to_next_question(message)
+        
+     #TODO сгрупировать в одну функцию следующие условия
         elif next_question_id == 1108:
             await self.special_questions.handle_question_1108(next_question, message)
         elif next_question_id == 1109:
             await self.special_questions.handle_question_1109(next_question, message)
         elif next_question_id == 1110:
-            await self.special_questions.handle_question_1109(next_question, message)
+            await self.special_questions.handle_question_1110(next_question, message)
         elif next_question_id == 1111:
-            await self.special_questions.handle_question_1109(next_question, message)
+            await self.special_questions.handle_question_1111(next_question, message)
         elif next_question_id == 1112:
-            await self.special_questions.handle_question_1109(next_question, message)
+            await self.special_questions.handle_question_1112(next_question, message)
         elif next_question_id == 1113:
-            await self.special_questions.handle_question_1109(next_question, message)
+            await self.special_questions.handle_question_1113(next_question, message)
         elif next_question_id == 1114:
-            await self.special_questions.handle_question_1109(next_question, message)
+            await self.special_questions.handle_question_1114(next_question, message)
+        elif next_question_id == 1115:
+            await self.special_questions.handle_question_1115(next_question, message)
+        elif next_question_id == 1116:
+            await self.special_questions.handle_question_1116(next_question, message)
+        elif next_question_id == 1117:
+            await self.special_questions.handle_question_1117(next_question, message)
+        elif next_question_id == 1118:
+            await self.special_questions.handle_question_1118(next_question, message)
+        elif next_question_id == 1119:
+            await self.special_questions.handle_question_1119(next_question, message)
+        elif next_question_id == 1120:
+            await self.special_questions.handle_question_1120(next_question, message)
+        elif next_question_id == 1121:
+            await self.special_questions.handle_question_1121(next_question, message)
+        elif next_question_id == 1122:
+            await self.special_questions.handle_question_1122(next_question, message)    
+        
+
         if next_question.image_url:
             await message.answer_photo(photo=FSInputFile(path=f"{next_question.image_url}"))
         if keyboard:
